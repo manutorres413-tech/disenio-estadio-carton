@@ -841,6 +841,7 @@
       const baseGeo = new THREE.ExtrudeGeometry(baseShape, extrudeSettings);
       const baseMesh = new THREE.Mesh(baseGeo, cardMat);
       baseMesh.rotation.x = -Math.PI / 2;
+      baseMesh.rotation.y = Math.PI; // Rotar 180 grados para alinear la muesca de la entrada al frente (Z positivo)
       baseMesh.position.y = 0.3; // Apoyado arriba del piso
       baseMesh.castShadow = true;
       baseMesh.receiveShadow = true;
@@ -865,6 +866,7 @@
       const customFieldGeo = new THREE.ShapeGeometry(fieldShape);
       const fieldMesh = new THREE.Mesh(customFieldGeo, fieldMat);
       fieldMesh.rotation.x = -Math.PI / 2;
+      fieldMesh.rotation.y = Math.PI; // Rotar para alinear con la base octogonal
       fieldMesh.position.y = 0.32; // Justo por encima del cartón base
       fieldMesh.receiveShadow = true;
       stadiumGroup.add(fieldMesh);
