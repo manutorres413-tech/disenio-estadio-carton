@@ -1,0 +1,9 @@
+# Temp y configs de Gemini/IDE
+.gemini/
+.tempmediaStorage/
+*.log
+
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store

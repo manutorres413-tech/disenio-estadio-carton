@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstadioCraft 3D - Diseñador de Estadios de Cartón para Picadas</title>
+  
+  <!-- Tipografía moderna -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN para estilos rápidos y limpios -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Configuración de Tailwind para usar la fuente Outfit y colores personalizados -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            outfit: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            amber: {
+              50: '#fef3c7',
+              600: '#d97706',
+              700: '#b45309',
+              900: '#78350f',
+            },
+            slate: {
+              900: '#0f172a',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Importamos Three.js y OrbitControls desde CDN para el visor 3D -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    /* Estilos personalizados para Glassmorphism y detalles premium */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glass-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-card:hover {
+      background: rgba(30, 41, 59, 0.6);
+      border-color: rgba(217, 119, 6, 0.3);
+      transform: translateY(-2px);
+    }
+
+    /* Ocultar barra de desplazamiento por defecto */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(217, 119, 6, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(217, 119, 6, 0.6);
+    }
+
+    /* Estilo del slider premium */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+      height: 6px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #d97706;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: #f59e0b;
+    }
+
+    /* Estilos del visor SVG de plantillas */
+    .svg-viewer {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+      background-size: 16px 16px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-outfit min-h-screen flex flex-col selection:bg-amber-600 selection:text-white overflow-x-hidden">
+
+  <!-- Encabezado de la aplicación -->
+  <header class="glass-panel sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-lg">
+    <div class="flex items-center space-x-3">
+      <span class="text-3xl">🏟️</span>
+      <div>
+        <h1 class="text-xl font-bold tracking-wide bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">EstadioCraft 3D</h1>
+        <p class="text-xs text-slate-400">Generador de Planos y Visor para Estadios de Picadas</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <div class="hidden md:flex flex-col text-right text-xs">
+        <span class="text-slate-400">Diseñado para cartón de 2-4mm</span>
+        <span class="text-amber-500 font-medium">Escala real de corte 1:1</span>
+      </div>
+      <button onclick="triggerPrintLayout()" class="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold px-4 py-2 rounded-lg shadow-lg hover:shadow-amber-500/20 active:scale-95 transition text-sm flex items-center space-x-2">
+        <span>🖨️</span>
+        <span>Imprimir Planos 1:1</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenedor principal -->
+  <main class="flex-1 flex flex-col lg:flex-row h-[calc(100vh-76px)] overflow-hidden">
+    
+    <!-- PANEL IZQUIERDO: Controles de dimensiones -->
+    <aside class="w-full lg:w-[380px] glass-panel border-r border-slate-800 p-6 flex flex-col overflow-y-auto space-y-6 shrink-0">
+      
+      <!-- Sección: Dimensiones Generales -->
+      <div>
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
+          <h2 class="font-bold text-sm tracking-widest text-amber-500 uppercase flex items-center gap-2">
+            <span>📐</span> Dimensiones Generales
+          </h2>
+          <span class="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-400">Centímetros</span>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- Largo (L) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-length" class="text-slate-300">Largo Total (L)</label>
+              <span id="val-length" class="font-bold text-amber-400">50 cm</span>
+            </div>
+            <input type="range" id="input-length" min="40" max="80" value="50" step="1" class="w-full" oninput="updateDimensions()">
+          </div>
+          
+          <!-- Ancho (W) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-width" class="text-slate-300">Ancho Total (W)</label>
+              <span id="val-width" class="font-bold text-amber-400">30 cm</span>
+            </div>
+            <input type="range" id="input-width" min="30" max="60" value="30" step="1" class="w-full" oninput="updateDimensions()">
+          </div>
+          
+          <!-- Altura Pared Exterior (H) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-height" class="text-slate-300">Alto Pared Exterior (H)</label>
+              <span id="val-height" class="font-bold text-amber-400">15 cm</span>
+            </div>
+            <input type="range" id="input-height" min="8" max="25" value="15" step="1" class="w-full" oninput="updateDimensions()">
+          </div>
+
+          <!-- Corte de Esquina Bevel (K) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-bevel" class="text-slate-300">Esquinas Diagonales (K)</label>
+              <span id="val-bevel" class="font-bold text-amber-400">8 cm</span>
+            </div>
+            <input type="range" id="input-bevel" min="4" max="15" value="8" step="0.5" class="w-full" oninput="updateDimensions()">
+          </div>
+          
+          <!-- Ancho Entrada (E) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-entrance" class="text-slate-300">Ancho Entrada (E)</label>
+              <span id="val-entrance" class="font-bold text-amber-400">12 cm</span>
+            </div>
+            <input type="range" id="input-entrance" min="8" max="20" value="12" step="0.5" class="w-full" oninput="updateDimensions()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección: Configuración de las Gradas -->
+      <div>
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
+          <h2 class="font-bold text-sm tracking-widest text-amber-500 uppercase flex items-center gap-2">
+            <span>🪜</span> Diseño de Gradas
+          </h2>
+          <span class="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-400">Escalonamiento</span>
+        </div>
+        
+        <div class="space-y-4">
+          <!-- Número de Escalones (N) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-steps" class="text-slate-300">Número de Escalones</label>
+              <span id="val-steps" class="font-bold text-amber-400">3</span>
+            </div>
+            <input type="range" id="input-steps" min="2" max="5" value="3" step="1" class="w-full" oninput="updateDimensions()">
+          </div>
+          
+          <!-- Altura de Escalón (hr) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-step-height" class="text-slate-300">Alto Escalón (Contrahuella)</label>
+              <span id="val-step-height" class="font-bold text-amber-400">3 cm</span>
+            </div>
+            <input type="range" id="input-step-height" min="1.5" max="5" value="3" step="0.5" class="w-full" oninput="updateDimensions()">
+          </div>
+          
+          <!-- Profundidad de Escalón (wd) -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-sm">
+              <label for="input-step-depth" class="text-slate-300">Profundidad Escalón (Huella)</label>
+              <span id="val-step-depth" class="font-bold text-amber-400">3 cm</span>
+            </div>
+            <input type="range" id="input-step-depth" min="1.5" max="5" value="3" step="0.5" class="w-full" oninput="updateDimensions()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertas de Viabilidad Geométrica -->
+      <div id="geom-warning" class="hidden bg-red-950/60 border border-red-800/80 p-3 rounded-lg text-xs text-red-300 space-y-1">
+        <div class="font-semibold flex items-center gap-1.5 text-red-400">
+          <span>⚠️</span> Geometría Imposible
+        </div>
+        <p id="geom-warning-text"></p>
+      </div>
+
+      <!-- Configuración de Impresión local -->
+      <div>
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
+          <h2 class="font-bold text-sm tracking-widest text-amber-500 uppercase flex items-center gap-2">
+            <span>⚙️</span> Impresión y Opciones
+          </h2>
+        </div>
+        
+        <div class="space-y-3">
+          <div class="space-y-1.5">
+            <label for="select-paper" class="text-xs text-slate-400">Tamaño del Papel</label>
+            <select id="select-paper" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+              <option value="A4">A4 (210mm x 297mm)</option>
+              <option value="Letter">Carta / Letter (216mm x 279mm)</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label for="select-walls" class="text-xs text-slate-400">Formato de Paredes</label>
+            <select id="select-walls" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+              <option value="segmented">Paredes por Segmentos (Más fácil de imprimir)</option>
+              <option value="continuous">Tira Continua Plegada (Requiere unir más hojas)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Resumen del material necesario -->
+      <div class="bg-slate-900/50 rounded-lg p-4 text-xs text-slate-400 space-y-2 border border-slate-800/40 mt-auto">
+        <h3 class="font-semibold text-slate-300">Estimación de Cartón:</h3>
+        <div class="flex justify-between">
+          <span>Área de base:</span>
+          <span id="calc-base-area" class="font-semibold text-slate-200">0 cm²</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Perímetro exterior:</span>
+          <span id="calc-perimeter" class="font-semibold text-slate-200">0 cm</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Ancho del campo de juego:</span>
+          <span id="calc-field-dims" class="font-semibold text-slate-200">0 x 0 cm</span>
+        </div>
+        <div class="flex justify-between border-t border-slate-800/80 pt-2 mt-1 text-slate-300 font-medium">
+          <span>Hojas A4 estimadas:</span>
+          <span id="calc-pages" class="text-amber-400 font-bold">~0 hojas</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- PANEL CENTRAL/DERECHO: Visores (Tabs) -->
+    <section class="flex-1 flex flex-col overflow-hidden bg-slate-950">
+      
+      <!-- Pestañas de Navegación -->
+      <nav class="flex border-b border-slate-800 bg-slate-950 px-6 pt-2 shrink-0">
+        <button id="tab-btn-3d" onclick="switchTab('3d')" class="border-b-2 border-amber-500 text-amber-500 px-4 py-3 text-sm font-semibold tracking-wide flex items-center gap-1.5 focus:outline-none transition">
+          <span>🕶️</span> Visor 3D Interactívo
+        </button>
+        <button id="tab-btn-2d" onclick="switchTab('2d')" class="border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-4 py-3 text-sm font-semibold tracking-wide flex items-center gap-1.5 focus:outline-none transition">
+          <span>📐</span> Plantillas para Cortar
+        </button>
+        <button id="tab-btn-guide" onclick="switchTab('guide')" class="border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-4 py-3 text-sm font-semibold tracking-wide flex items-center gap-1.5 focus:outline-none transition">
+          <span>📖</span> Guía de Armado
+        </button>
+        <button id="tab-btn-ref" onclick="switchTab('ref')" class="border-b-2 border-transparent text-slate-400 hover:text-slate-200 px-4 py-3 text-sm font-semibold tracking-wide flex items-center gap-1.5 focus:outline-none transition">
+          <span>🖼️</span> Imagen de Referencia
+        </button>
+      </nav>
+
+      <!-- Contenido de las pestañas -->
+      <div class="flex-1 relative overflow-hidden">
+        
+        <!-- Pestaña 1: Visor 3D (Three.js) -->
+        <div id="tab-content-3d" class="absolute inset-0 block">
+          <div id="canvas-container" class="w-full h-full relative cursor-grab active:cursor-grabbing bg-slate-950">
+            <!-- Instrucción del visor -->
+            <div class="absolute bottom-4 left-4 glass-panel px-3 py-1.5 rounded text-xs text-slate-300 pointer-events-none select-none flex items-center gap-1.5">
+              <span>🖱️</span> Haz clic y arrastra para rotar | Rueda para zoom
+            </div>
+            <div id="three-load-error" class="hidden absolute top-4 left-4 bg-red-950 border border-red-800 px-4 py-2.5 rounded text-xs text-red-300">
+              Three.js no pudo cargarse. Revisa tu conexión a internet para ver el visor 3D, pero puedes usar las plantillas 2D sin problema.
+            </div>
+          </div>
+        </div>
+
+        <!-- Pestaña 2: Plantillas 2D -->
+        <div id="tab-content-2d" class="absolute inset-0 hidden overflow-y-auto p-6 space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-bold text-slate-200">Planos de Piezas</h3>
+              <p class="text-xs text-slate-400">Estas son las plantillas que se imprimirán a escala. Dobla por las líneas discontinuas rojas y corta por las continuas negras.</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="downloadAllSVGs()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 active:scale-95 transition">
+                📥 Descargar todos los SVGs
+              </button>
+            </div>
+          </div>
+
+          <!-- Malla de plantillas SVG -->
+          <div id="templates-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
+            <!-- Cargado dinámicamente desde JS -->
+          </div>
+        </div>
+
+        <!-- Pestaña 3: Guía de Armado -->
+        <div id="tab-content-guide" class="absolute inset-0 hidden overflow-y-auto p-8 max-w-4xl mx-auto space-y-6">
+          <h3 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-amber-400 to-amber-500 bg-clip-text text-transparent">Guía de Construcción Paso a Paso</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-card rounded-xl p-5 space-y-3">
+              <h4 class="font-bold text-amber-500 text-sm flex items-center gap-1">🛠️ Materiales y Herramientas</h4>
+              <ul class="text-sm text-slate-300 space-y-2 list-disc pl-4">
+                <li><strong>Cartón Corrugado:</strong> De 2mm a 4mm de espesor (del tipo rígido de cajas de envíos).</li>
+                <li><strong>Pegamento:</strong> Silicona caliente (recomendada por secado rápido) o cola vinílica de alta densidad.</li>
+                <li><strong>Cutter / Trincheta:</strong> Hoja afilada para cortes limpios.</li>
+                <li><strong>Regla metálica:</strong> Imprescindible para cortar derecho y guiar los pliegues.</li>
+                <li><strong>Objeto romo (Marcador):</strong> Una lapicera sin tinta o la parte posterior del cutter para "marcar" las líneas de pliegue.</li>
+                <li><strong>Cinta de papel (de enmascarar):</strong> Para fijar las uniones temporalmente.</li>
+              </ul>
+            </div>
+
+            <div class="glass-card rounded-xl p-5 space-y-3">
+              <h4 class="font-bold text-amber-500 text-sm flex items-center gap-1">💡 Consejos Clave</h4>
+              <ul class="text-sm text-slate-300 space-y-2 list-disc pl-4">
+                <li><strong>Marcado (Scoring):</strong> En el cartón corrugado, NUNCA cortes del todo en la línea de pliegue. Pasa un objeto romo presionando suavemente para hundir el cartón y hacer que se doble como una bisagra perfecta.</li>
+                <li><strong>Dirección del Corrugado:</strong> Para la tira de la pared exterior, corta de forma que las "olas" internas del cartón sean verticales. Esto facilitará hacer los 8 dobleces de las esquinas.</li>
+                <li><strong>Higiene Alimentaria:</strong> Antes de colocar el jamón y el queso, cubre el interior del estadio con papel manteca (de horno) o papel film para evitar que la grasa humedezca el cartón.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Pasos Ilustrados -->
+          <div class="space-y-4 pt-4">
+            <h4 class="font-bold text-slate-200 text-base">Proceso de Ensamblado:</h4>
+            
+            <div class="relative pl-8 border-l border-amber-600/40 space-y-6">
+              <!-- Paso 1 -->
+              <div class="relative">
+                <div class="absolute -left-12 top-0 bg-amber-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">1</div>
+                <h5 class="font-bold text-slate-200 text-sm">Impresión y Transferencia</h5>
+                <p class="text-xs text-slate-400 mt-1">Imprime los planos a escala 1:1. Si usas impresión por baldosas en varias hojas A4, alinea las cruces de registro con precisión y únelas con cinta adhesiva. Luego, recorta la plantilla de papel y dibuja su contorno sobre el cartón con un lápiz.</p>
+              </div>
+
+              <!-- Paso 2 -->
+              <div class="relative">
+                <div class="absolute -left-12 top-0 bg-amber-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">2</div>
+                <h5 class="font-bold text-slate-200 text-sm">Corte de la Base y las Costillas</h5>
+                <p class="text-xs text-slate-400 mt-1">Corta la base octogonal con el cutter guiado por la regla. Asegúrate de recortar también el hueco de la entrada. Corta todas las costillas de soporte (necesitarás al menos 14 costillas en forma de escalera, 2 para cada una de las 7 secciones de grada).</p>
+              </div>
+
+              <!-- Paso 3 -->
+              <div class="relative">
+                <div class="absolute -left-12 top-0 bg-amber-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">3</div>
+                <h5 class="font-bold text-slate-200 text-sm">Montaje del Esqueleto Interior</h5>
+                <p class="text-xs text-slate-400 mt-1">Pega las costillas verticalmente en la base usando silicona caliente. Colócalas de forma perpendicular a los bordes exteriores, una cerca de cada extremo de las secciones de gradas. Esto creará el armazón que mantendrá la inclinación exacta de las gradas.</p>
+              </div>
+
+              <!-- Paso 4 -->
+              <div class="relative">
+                <div class="absolute -left-12 top-0 bg-amber-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">4</div>
+                <h5 class="font-bold text-slate-200 text-sm">Plegado de Gradas en Acordeón</h5>
+                <p class="text-xs text-slate-400 mt-1">Toma las 7 piezas de gradas. Marca con una regla y la parte trasera de tu cúter todas las líneas discontinuas. Dobla alternativamente a 90° (hacia arriba y hacia los lados) para dar la forma de escalón. Aplica pegamento sobre las costillas de la base y asienta las gradas sobre ellas.</p>
+              </div>
+
+              <!-- Paso 5 -->
+              <div class="relative">
+                <div class="absolute -left-12 top-0 bg-amber-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">5</div>
+                <h5 class="font-bold text-slate-200 text-sm">Pared Exterior y Entrada</h5>
+                <p class="text-xs text-slate-400 mt-1">Corta la tira de la pared exterior (si lo hiciste en una sola tira, pliégala en los puntos indicados). Pégala bordeando toda la base octogonal. Finalmente, coloca las dos pequeñas paredes de la entrada a los lados del canal de acceso para cerrar la estructura del campo.</p>
+              </div>
+            </div>
+          </div>
+          <div class="pb-12"></div>
+        </div>
+
+        <!-- Pestaña 4: Imagen de Referencia -->
+        <div id="tab-content-ref" class="absolute inset-0 hidden overflow-y-auto p-6 flex flex-col items-center justify-start bg-slate-900/50">
+          <div class="max-w-2xl w-full bg-slate-950 p-4 rounded-xl border border-slate-800 shadow-xl flex flex-col space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-850 pb-2">
+              <h4 class="font-bold text-slate-300 text-sm">Imagen Original Compartida</h4>
+              <span class="text-xs text-slate-500">WhatsApp Image</span>
+            </div>
+            <img src="WhatsApp Image 2026-05-21 at 20.58.02.jpeg" alt="Estadio de cartón para picadas" class="w-full rounded-lg object-contain max-h-[60vh] border border-slate-800" />
+            <p class="text-xs text-slate-400 text-center leading-relaxed">Este es el estadio original que estamos replicando. El diseño incluye gradas perimetrales escalonadas para poner las rodajas de embutidos y los cubos de queso, y un campo central abierto (césped verde) para colocar aderezos, servilletas y escarbadientes.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Variables globales de geometría
+    let L = 50;  // Largo
+    let W = 30;  // Ancho
+    let H = 15;  // Alto exterior
+    let K = 8;   // Bisel de esquina
+    let E = 12;  // Ancho entrada
+    let N = 3;   // Número de escalones
+    let hr = 3;  // Altura contrahuella
+    let wd = 3;  // Ancho huella
+
+    const tg225 = Math.tan(22.5 * Math.PI / 180); // 0.41421356
+
+    // Three.js variables
+    let scene, camera, renderer, controls;
+    let stadiumGroup = null;
+
+    // Inicializar la aplicación
+    window.onload = function() {
+      // 1. Inicializar Three.js
+      init3D();
+      
+      // 2. Renderizar cálculos iniciales
+      updateDimensions();
+    };
+
+    // Función para manejar las Pestañas
+    function switchTab(tab) {
+      // Ocultar todos los contenidos
+      document.getElementById('tab-content-3d').classList.add('hidden');
+      document.getElementById('tab-content-2d').classList.add('hidden');
+      document.getElementById('tab-content-guide').classList.add('hidden');
+      document.getElementById('tab-content-ref').classList.add('hidden');
+      
+      // Desactivar todos los botones
+      const btn3d = document.getElementById('tab-btn-3d');
+      const btn2d = document.getElementById('tab-btn-2d');
+      const btnGuide = document.getElementById('tab-btn-guide');
+      const btnRef = document.getElementById('tab-btn-ref');
+      
+      [btn3d, btn2d, btnGuide, btnRef].forEach(btn => {
+        btn.classList.remove('border-amber-500', 'text-amber-500');
+        btn.classList.add('border-transparent', 'text-slate-400');
+      });
+
+      // Mostrar el seleccionado y activar su botón
+      document.getElementById('tab-content-' + tab).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-btn-' + tab);
+      activeBtn.classList.remove('border-transparent', 'text-slate-400');
+      activeBtn.classList.add('border-amber-500', 'text-amber-500');
+
+      // Si es la pestaña 3D, redimensionar Three.js
+      if (tab === '3d') {
+        onWindowResize();
+      }
+    }
+
+    // Actualiza dimensiones desde los controles deslizantes
+    function updateDimensions() {
+      // Leer valores de sliders
+      L = parseFloat(document.getElementById('input-length').value);
+      W = parseFloat(document.getElementById('input-width').value);
+      H = parseFloat(document.getElementById('input-height').value);
+      K = parseFloat(document.getElementById('input-bevel').value);
+      E = parseFloat(document.getElementById('input-entrance').value);
+      N = parseInt(document.getElementById('input-steps').value);
+      hr = parseFloat(document.getElementById('input-step-height').value);
+      wd = parseFloat(document.getElementById('input-step-depth').value);
+
+      // Actualizar etiquetas en la interfaz
+      document.getElementById('val-length').innerText = L + ' cm';
+      document.getElementById('val-width').innerText = W + ' cm';
+      document.getElementById('val-height').innerText = H + ' cm';
+      document.getElementById('val-bevel').innerText = K + ' cm';
+      document.getElementById('val-entrance').innerText = E + ' cm';
+      document.getElementById('val-steps').innerText = N;
+      document.getElementById('val-step-height').innerText = hr + ' cm';
+      document.getElementById('val-step-depth').innerText = wd + ' cm';
+
+      // Validación geométrica
+      const bleacherDepth = N * wd;
+      const valid = validateGeometry(bleacherDepth);
+
+      if (valid) {
+        // Ocultar advertencia
+        document.getElementById('geom-warning').classList.add('hidden');
+        
+        // Recalcular métricas en el resumen
+        const baseArea = calculateBaseArea();
+        const perimeter = calculateOuterPerimeter();
+        const fieldL = L - 2 * bleacherDepth;
+        const fieldW = W - 2 * bleacherDepth;
+        
+        document.getElementById('calc-base-area').innerText = Math.round(baseArea) + ' cm²';
+        document.getElementById('calc-perimeter').innerText = Math.round(perimeter * 10) / 10 + ' cm';
+        document.getElementById('calc-field-dims').innerText = Math.max(0, Math.round(fieldL * 10) / 10) + ' x ' + Math.max(0, Math.round(fieldW * 10) / 10) + ' cm';
+        
+        // Estimación de hojas
+        const totalSheets = estimateSheetsRequired(bleacherDepth);
+        document.getElementById('calc-pages').innerText = '~' + totalSheets + ' hojas A4/Carta';
+
+        // Actualizar el modelo 3D
+        update3DModel(bleacherDepth);
+
+        // Actualizar las plantillas 2D en la interfaz
+        renderSVGTemplates(bleacherDepth);
+      }
+    }
+
+    // Valida que el diseño sea mecánicamente y físicamente construible
+    function validateGeometry(bleacherDepth) {
+      const warningDiv = document.getElementById('geom-warning');
+      const warningText = document.getElementById('geom-warning-text');
+      
+      // Ancho mínimo del campo de juego libre en el medio
+      const minFieldWidth = 4; // cm
+      const maxAllowedBleacherDepth = (W / 2) - (minFieldWidth / 2);
+
+      if (bleacherDepth >= maxAllowedBleacherDepth) {
+        warningDiv.classList.remove('hidden');
+        warningText.innerText = `Las gradas son demasiado profundas (${bleacherDepth} cm). Superan el espacio disponible del ancho total (${W} cm). Reduce los escalones o su profundidad.`;
+        return false;
+      }
+
+      // El bisel de esquina K no puede ser más grande que la mitad del ancho
+      if (K >= W / 2) {
+        warningDiv.classList.remove('hidden');
+        warningText.innerText = `Las esquinas (K = ${K} cm) son demasiado grandes para el ancho total (${W} cm). Reduce K.`;
+        return false;
+      }
+
+      // La entrada no puede ser más ancha que la sección frontal recta central
+      const maxEntrance = L - 2 * K - 4;
+      if (E >= maxEntrance) {
+        warningDiv.classList.remove('hidden');
+        warningText.innerText = `La entrada (E = ${E} cm) es demasiado ancha para el estadio. Máximo recomendado: ${Math.round(maxEntrance)} cm.`;
+        return false;
+      }
+
+      // La altura de las gradas no puede superar el alto exterior de la pared
+      const bleacherHeight = N * hr;
+      if (bleacherHeight > H) {
+        warningDiv.classList.remove('hidden');
+        warningText.innerText = `La altura total de las gradas (${bleacherHeight} cm) supera la altura de la pared exterior (${H} cm). Aumenta la altura exterior o reduce el tamaño de las gradas.`;
+        return false;
+      }
+
+      return true;
+    }
+
+    // Calcula el área aproximada de la base octogonal con muesca
+    function calculateBaseArea() {
+      // Rectángulo completo: L * W
+      // Restar las 4 esquinas de corte: 4 * (1/2 * K^2) = 2 * K^2
+      // Restar la muesca de la entrada: E * (N * wd)
+      const fullArea = L * W;
+      const cornerArea = 2 * K * K;
+      const entranceArea = E * (N * wd);
+      return fullArea - cornerArea - entranceArea;
+    }
+
+    // Calcula el perímetro exterior del estadio (sin la entrada)
+    function calculateOuterPerimeter() {
+      const frontSides = L - 2 * K - E;
+      const diagonals = 4 * (K * Math.sqrt(2));
+      const sides = 2 * (W - 2 * K);
+      const back = L - 2 * K;
+      return frontSides + diagonals + sides + back;
+    }
+
+    // Estimación aproximada de cuántas páginas A4 se necesitan para imprimir
+    function estimateSheetsRequired(bleacherDepth) {
+      // Base: usualmente 2x2 = 4 páginas para 50x30 cm
+      let baseSheets = Math.ceil(L / 27.7) * Math.ceil(W / 19.0);
+      
+      // Paredes: si es tira continua, aprox. 5 hojas. Si es segmentado, cabe en ~3 hojas.
+      const isSegmented = document.getElementById('select-walls').value === 'segmented';
+      let wallSheets = isSegmented ? 3 : 5;
+      
+      // Gradas: trasera es 1.5 hojas, las demás caben juntas en ~3 hojas.
+      let bleacherSheets = 4;
+      
+      // Costillas y paredes de entrada: caben en ~2 hojas.
+      let helperSheets = 2;
+
+      return baseSheets + wallSheets + bleacherSheets + helperSheets;
+    }
+
+    // INICIALIZACIÓN DE THREE.JS
+    function init3D() {
+      const container = document.getElementById('canvas-container');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      // Crear escena
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0f1d);
+
+      // Crear cámara
+      camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+      camera.position.set(0, 45, 60);
+
+      // Crear renderizador
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(width, height);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+      } catch (e) {
+        document.getElementById('three-load-error').classList.remove('hidden');
+        return;
+      }
+
+      // Controles
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2.1; // No bajar de la mesa
+      controls.minDistance = 20;
+      controls.maxDistance = 150;
+
+      // Iluminación
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(20, 40, 30);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.bias = -0.0005;
+      scene.add(dirLight);
+
+      const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.25);
+      dirLight2.position.set(-20, 20, -30);
+      scene.add(dirLight2);
+
+      // Piso (Mesa de trabajo)
+      const floorGeo = new THREE.PlaneGeometry(200, 200);
+      const floorMat = new THREE.MeshStandardMaterial({ 
+        color: 0x111827, 
+        roughness: 0.8,
+        metalness: 0.1
+      });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.5;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      // Cuadrícula sutil en el piso
+      const grid = new THREE.GridHelper(100, 20, 0x374151, 0x1f2937);
+      grid.position.y = -0.45;
+      scene.add(grid);
+
+      // Escuchar cambio de tamaño de ventana
+      window.addEventListener('resize', onWindowResize);
+
+      // Iniciar bucle de animación
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (controls) controls.update();
+      if (renderer) renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('canvas-container');
+      if (!container || !camera || !renderer) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    // Textura procedural de cartón (Beige)
+    function createCardboardMaterial(colorCode = 0xd7b899) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#' + colorCode.toString(16);
+      ctx.fillRect(0, 0, 128, 128);
+      
+      // Fibras de cartón
+      ctx.fillStyle = 'rgba(120, 90, 60, 0.12)';
+      for (let i = 0; i < 400; i++) {
+        const x = Math.random() * 128;
+        const y = Math.random() * 128;
+        const w = Math.random() * 5 + 2;
+        const h = Math.random() * 1 + 0.5;
+        ctx.fillRect(x, y, w, h);
+      }
+      
+      // Líneas corrugadas verticales súper tenues
+      ctx.fillStyle = 'rgba(90, 60, 30, 0.04)';
+      for (let x = 0; x < 128; x += 4) {
+        ctx.fillRect(x, 0, 1, 128);
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      return new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.9,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      });
+    }
+
+    // Textura procedural para el pasto del campo de juego (Verde)
+    function createFieldMaterial() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      
+      // Base verde
+      ctx.fillStyle = '#3f6212'; // verde oscuro
+      ctx.fillRect(0, 0, 128, 128);
+      
+      // Líneas de corte de césped
+      ctx.fillStyle = '#4d7c0f'; // verde más claro
+      for (let y = 0; y < 128; y += 16) {
+        ctx.fillRect(0, y, 128, 8);
+      }
+
+      // Ruido
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      for (let i = 0; i < 1000; i++) {
+        const x = Math.random() * 128;
+        const y = Math.random() * 128;
+        ctx.fillRect(x, y, 1, 1);
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      return new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.95,
+        metalness: 0.0,
+        side: THREE.DoubleSide
+      });
+    }
+
+    // Obtiene las coordenadas del octágono a una distancia s del borde
+    function getOctagonVertices(s) {
+      const c = tg225 * s;
+      return [
+        { x: K + c, z: s },                              // 0: back-left
+        { x: L - K - c, z: s },                          // 1: back-right
+        { x: L - s, z: K + c },                          // 2: right-back bevel
+        { x: L - s, z: W - K - c },                      // 3: right-front bevel
+        { x: L - K - c, z: W - s },                      // 4: front-right corner
+        { x: L / 2 + E / 2, z: W - s },                  // 5: entrance-right outer
+        { x: L / 2 - E / 2, z: W - s },                  // 6: entrance-left outer
+        { x: K + c, z: W - s },                          // 7: front-left corner
+        { x: s, z: W - K - c },                          // 8: left-front bevel
+        { x: s, z: K + c }                               // 9: left-back bevel
+      ];
+    }
+
+    // ACTUALIZA EL MODELO 3D EN TIEMPO REAL
+    function update3DModel(bleacherDepth) {
+      if (!scene) return;
+
+      // Remover grupo anterior si existe
+      if (stadiumGroup) {
+        scene.remove(stadiumGroup);
+        // Liberar geometrías
+        stadiumGroup.traverse(child => {
+          if (child.isMesh) {
+            child.geometry.dispose();
+          }
+        });
+      }
+
+      stadiumGroup = new THREE.Group();
+
+      const cardMat = createCardboardMaterial(0xe4c49f); // Cartón beige normal
+      const cardCutMat = createCardboardMaterial(0xccaa88); // Cartón borde cortado (oscuro)
+      const fieldMat = createFieldMaterial(); // Césped
+
+      // 1. BASE DEL ESTADIO (Extruida)
+      const baseShape = new THREE.Shape();
+      const outerV = getOctagonVertices(0);
+      
+      // Dibujar perímetro de la base con la muesca de la entrada
+      baseShape.moveTo(outerV[0].x - L/2, outerV[0].z - W/2);
+      baseShape.lineTo(outerV[1].x - L/2, outerV[1].z - W/2);
+      baseShape.lineTo(outerV[2].x - L/2, outerV[2].z - W/2);
+      baseShape.lineTo(outerV[3].x - L/2, outerV[3].z - W/2);
+      baseShape.lineTo(outerV[4].x - L/2, outerV[4].z - W/2);
+      baseShape.lineTo(outerV[5].x - L/2, outerV[5].z - W/2);
+      
+      // Muesca entrada hasta la profundidad de las gradas
+      baseShape.lineTo(L/2 + E/2 - L/2, W - bleacherDepth - W/2);
+      baseShape.lineTo(L/2 - E/2 - L/2, W - bleacherDepth - W/2);
+      
+      baseShape.lineTo(outerV[6].x - L/2, outerV[6].z - W/2);
+      baseShape.lineTo(outerV[7].x - L/2, outerV[7].z - W/2);
+      baseShape.lineTo(outerV[8].x - L/2, outerV[8].z - W/2);
+      baseShape.lineTo(outerV[9].x - L/2, outerV[9].z - W/2);
+      baseShape.closePath();
+
+      const extrudeSettings = { depth: 0.3, bevelEnabled: false };
+      const baseGeo = new THREE.ExtrudeGeometry(baseShape, extrudeSettings);
+      const baseMesh = new THREE.Mesh(baseGeo, cardMat);
+      baseMesh.rotation.x = -Math.PI / 2;
+      baseMesh.position.y = 0.3; // Apoyado arriba del piso
+      baseMesh.castShadow = true;
+      baseMesh.receiveShadow = true;
+      stadiumGroup.add(baseMesh);
+
+      // 2. CAMPO DE JUEGO (Placa verde en el centro)
+      const fieldShape = new THREE.Shape();
+      const innerV = getOctagonVertices(bleacherDepth);
+      fieldShape.moveTo(innerV[0].x - L/2, innerV[0].z - W/2);
+      fieldShape.lineTo(innerV[1].x - L/2, innerV[1].z - W/2);
+      fieldShape.lineTo(innerV[2].x - L/2, innerV[2].z - W/2);
+      fieldShape.lineTo(innerV[3].x - L/2, innerV[3].z - W/2);
+      fieldShape.lineTo(innerV[4].x - L/2, innerV[4].z - W/2);
+      fieldShape.lineTo(innerV[5].x - L/2, innerV[5].z - W/2);
+      fieldShape.lineTo(innerV[6].x - L/2, innerV[6].z - W/2);
+      fieldShape.lineTo(innerV[7].x - L/2, innerV[7].z - W/2);
+      fieldShape.lineTo(innerV[8].x - L/2, innerV[8].z - W/2);
+      fieldShape.lineTo(innerV[9].x - L/2, innerV[9].z - W/2);
+      fieldShape.closePath();
+
+      const fieldGeo = new THREE.PlaneGeometry(L, W); // Solo referencia
+      const customFieldGeo = new THREE.ShapeGeometry(fieldShape);
+      const fieldMesh = new THREE.Mesh(customFieldGeo, fieldMat);
+      fieldMesh.rotation.x = -Math.PI / 2;
+      fieldMesh.position.y = 0.32; // Justo por encima del cartón base
+      fieldMesh.receiveShadow = true;
+      stadiumGroup.add(fieldMesh);
+
+      // 3. PARED EXTERIOR (Modelada como paneles finos)
+      // Definimos los segmentos excluyendo el espacio de entrada
+      const wallSegments = [
+        [0, 1], // Trasera
+        [1, 2], // Bisel Trasera-Derecha
+        [2, 3], // Derecha
+        [3, 4], // Bisel Derecha-Delantera
+        [4, 5], // Delantera-Derecha
+        // La entrada [5,6] queda abierta
+        [6, 7], // Delantera-Izquierda
+        [7, 8], // Bisel Izquierda-Delantera
+        [8, 9], // Izquierda
+        [9, 0]  // Bisel Izquierda-Trasera
+      ];
+
+      const wallThickness = 0.3; // 3mm de espesor de cartón
+      
+      wallSegments.forEach(seg => {
+        const p1 = outerV[seg[0]];
+        const p2 = outerV[seg[1]];
+        
+        // Calcular longitud del tramo
+        const dx = p2.x - p1.x;
+        const dz = p2.z - p1.z;
+        const length = Math.sqrt(dx*dx + dz*dz);
+        const angle = Math.atan2(dz, dx);
+
+        // Crear geometría de la pared
+        const wallGeo = new THREE.BoxGeometry(length, H, wallThickness);
+        const wallMesh = new THREE.Mesh(wallGeo, cardMat);
+        
+        // Posicionar en el punto medio del segmento
+        const mx = (p1.x + p2.x) / 2 - L/2;
+        const mz = (p1.z + p2.z) / 2 - W/2;
+        
+        wallMesh.position.set(mx, H/2 + 0.3, mz);
+        wallMesh.rotation.y = -angle;
+        wallMesh.castShadow = true;
+        wallMesh.receiveShadow = true;
+        stadiumGroup.add(wallMesh);
+      });
+
+      // 4. GRADAS (Mallas personalizadas escalón por escalón)
+      // Las gradas tienen 8 secciones separadas (excluyendo el hueco de entrada entre el vertice 5 y 6)
+      const bleacherSections = [
+        { start: 0, end: 1 }, // Back
+        { start: 1, end: 2 }, // Diag TR
+        { start: 2, end: 3 }, // Right
+        { start: 3, end: 4 }, // Diag BR
+        { start: 4, end: 5 }, // Front R
+        // 5 a 6 es la Entrada
+        { start: 6, end: 7 }, // Front L
+        { start: 7, end: 8 }, // Diag BL
+        { start: 8, end: 9 }, // Left
+        { start: 9, end: 0 }  // Diag TL
+      ];
+
+      bleacherSections.forEach(sec => {
+        const indices = [sec.start, sec.end];
+        const geo = new THREE.BufferGeometry();
+        const vertices = [];
+        const indicesList = [];
+        let vertexCount = 0;
+
+        // Construir gradas nivel por nivel (escalón por escalón)
+        for (let i = 1; i <= N; i++) {
+          const sInner = (N - i + 1) * wd;
+          const sOuter = (N - i) * wd;
+          const hBottom = (i - 1) * hr + 0.3; // base offset
+          const hTop = i * hr + 0.3;
+
+          // Vértices del contorno octogonal en los límites interno y externo del escalón actual
+          const vInner = getOctagonVertices(sInner);
+          const vOuter = getOctagonVertices(sOuter);
+
+          // Puntos 3D
+          // Riser (Contrahuella Vertical)
+          const pBottomL = { x: vInner[indices[0]].x - L/2, y: hBottom, z: vInner[indices[0]].z - W/2 };
+          const pBottomR = { x: vInner[indices[1]].x - L/2, y: hBottom, z: vInner[indices[1]].z - W/2 };
+          const pTopL    = { x: vInner[indices[0]].x - L/2, y: hTop,    z: vInner[indices[0]].z - W/2 };
+          const pTopR    = { x: vInner[indices[1]].x - L/2, y: hTop,    z: vInner[indices[1]].z - W/2 };
+
+          // Tread (Huella Horizontal)
+          const pTreadOuterL = { x: vOuter[indices[0]].x - L/2, y: hTop, z: vOuter[indices[0]].z - W/2 };
+          const pTreadOuterR = { x: vOuter[indices[1]].x - L/2, y: hTop, z: vOuter[indices[1]].z - W/2 };
+
+          // Añadir quads a los datos del búfer (un quad = 2 triángulos = 6 vértices)
+          
+          // Riser Quad
+          // Triángulo 1
+          vertices.push(pBottomL.x, pBottomL.y, pBottomL.z);
+          vertices.push(pBottomR.x, pBottomR.y, pBottomR.z);
+          vertices.push(pTopL.x, pTopL.y, pTopL.z);
+          // Triángulo 2
+          vertices.push(pTopL.x, pTopL.y, pTopL.z);
+          vertices.push(pBottomR.x, pBottomR.y, pBottomR.z);
+          vertices.push(pTopR.x, pTopR.y, pTopR.z);
+
+          // Tread Quad
+          // Triángulo 1
+          vertices.push(pTopL.x, pTopL.y, pTopL.z);
+          vertices.push(pTopR.x, pTopR.y, pTopR.z);
+          vertices.push(pTreadOuterL.x, pTreadOuterL.y, pTreadOuterL.z);
+          // Triángulo 2
+          vertices.push(pTreadOuterL.x, pTreadOuterL.y, pTreadOuterL.z);
+          vertices.push(pTopR.x, pTopR.y, pTopR.z);
+          vertices.push(pTreadOuterR.x, pTreadOuterR.y, pTreadOuterR.z);
+        }
+
+        // Crear geometría
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geo.computeVertexNormals();
+
+        const mesh = new THREE.Mesh(geo, cardMat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        stadiumGroup.add(mesh);
+
+        // Opcional: Agregar bordes de pliegue / alambrado para mejor visualización
+        const edges = new THREE.EdgesGeometry(geo, 10);
+        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x854d0e, linewidth: 1.5 }));
+        stadiumGroup.add(line);
+      });
+
+      // 5. PAREDES LATERALES DEL CANAL DE LA ENTRADA (2 rectángulos)
+      // Izquierda del canal (en X = L/2 - E/2) y Derecha del canal (en X = L/2 + E/2)
+      // Van desde Z = W a Z = W - bleacherDepth. Altura es H.
+      const entryWallGeo = new THREE.BoxGeometry(wallThickness, H, bleacherDepth);
+      
+      const leftEntryWall = new THREE.Mesh(entryWallGeo, cardMat);
+      leftEntryWall.position.set(L/2 - E/2, H/2 + 0.3, W - bleacherDepth/2 - W/2);
+      leftEntryWall.castShadow = true;
+      stadiumGroup.add(leftEntryWall);
+
+      const rightEntryWall = new THREE.Mesh(entryWallGeo, cardMat);
+      rightEntryWall.position.set(L/2 + E/2, H/2 + 0.3, W - bleacherDepth/2 - W/2);
+      rightEntryWall.castShadow = true;
+      stadiumGroup.add(rightEntryWall);
+
+      scene.add(stadiumGroup);
+    }
+
+    // RENDERIZADOR DE PLANTILLAS 2D EN LA INTERFAZ
+    function renderSVGTemplates(bleacherDepth) {
+      const grid = document.getElementById('templates-grid');
+      grid.innerHTML = ''; // Limpiar malla
+
+      // Lista de piezas a renderizar
+      // 1. La Base Octogonal
+      // 2. Pared Exterior (Completa o Segmentada)
+      // 3. Grada Trasera
+      // 4. Grada Lateral (2)
+      // 5. Grada Diagonal (4)
+      // 6. Grada Delantera (2)
+      // 7. Costillas de Soporte
+
+      // --- PIEZA 1: BASE ---
+      const baseSVG = createBaseSVG(bleacherDepth);
+      grid.appendChild(createTemplateCard('Plano de la Base', 'Base octogonal con abertura para la entrada.', baseSVG, 'base_stadium.svg'));
+
+      // --- PIEZA 2: PARED EXTERIOR ---
+      const wallsMode = document.getElementById('select-walls').value;
+      if (wallsMode === 'continuous') {
+        const wallSVG = createContinuousWallSVG();
+        grid.appendChild(createTemplateCard('Pared Exterior Continua', 'Larga tira doblada alrededor de las esquinas.', wallSVG, 'pared_continua.svg'));
+      } else {
+        const wallSVG = createSegmentedWallsSVG();
+        grid.appendChild(createTemplateCard('Paredes Exteriores (Segmentos)', 'Paneles individuales más fáciles de imprimir en hojas normales.', wallSVG, 'paredes_segmentadas.svg'));
+      }
+
+      // --- PIEZA 3: GRADA TRASERA ---
+      const backGradaSVG = createGradaSVG('back', L - 2 * K, bleacherDepth);
+      grid.appendChild(createTemplateCard('Grada Trasera', 'Grada de la sección recta superior (X1).', backGradaSVG, 'grada_trasera.svg'));
+
+      // --- PIEZA 4: GRADAS LATERALES (IZQUIERDA/DERECHA) ---
+      const sideGradaSVG = createGradaSVG('side', W - 2 * K, bleacherDepth);
+      grid.appendChild(createTemplateCard('Gradas Laterales (Izquierda y Derecha)', 'Tiras para las dos secciones laterales rectas (corta 2 de este molde).', sideGradaSVG, 'grada_lateral.svg'));
+
+      // --- PIEZA 5: GRADAS DIAGONALES (4 ESQUINAS) ---
+      const diagGradaSVG = createGradaSVG('diagonal', K * Math.sqrt(2), bleacherDepth);
+      grid.appendChild(createTemplateCard('Gradas Diagonales (Esquinas)', 'Tiras para los 4 tramos de esquina (corta 4 de este molde).', diagGradaSVG, 'grada_diagonal.svg'));
+
+      // --- PIEZA 6: GRADAS DELANTERAS (DERECHA E IZQUIERDA DE LA ENTRADA) ---
+      const frontGradaSVG = createGradaSVG('front-right', (L - 2 * K - E) / 2, bleacherDepth);
+      grid.appendChild(createTemplateCard('Gradas Delanteras (Par Izquierdo y Derecho)', 'Moldes con un extremo en ángulo (inglete a 22.5°) y el de la entrada a 90° (corta 1 de cada molde).', frontGradaSVG, 'grada_delantera.svg'));
+
+      // --- PIEZA 7: COSTILLAS DE SOPORTE ---
+      const ribsSVG = createRibsSVG();
+      grid.appendChild(createTemplateCard('Costillas de Soporte (Malla de Armado)', 'Costillas tipo escalera. Pégalas en la base antes de asentar las gradas.', ribsSVG, 'costillas_soporte.svg'));
+    }
+
+    // Envoltura HTML de cada tarjeta de plantilla
+    function createTemplateCard(title, desc, svgContent, filename) {
+      const card = document.createElement('div');
+      card.className = 'glass-card rounded-xl p-5 flex flex-col space-y-4';
+      
+      const header = `
+        <div class="flex justify-between items-start">
+          <div>
+            <h4 class="font-bold text-slate-200 text-sm">${title}</h4>
+            <p class="text-xs text-slate-400 mt-1">${desc}</p>
+          </div>
+          <button onclick="downloadSVG('${filename}', '${svgContent.replace(/'/g, "\\'")}')" class="bg-amber-600/10 hover:bg-amber-600 text-amber-500 hover:text-white border border-amber-600/30 rounded-lg p-1.5 transition text-xs font-semibold" title="Descargar SVG">
+            📥 SVG
+          </button>
+        </div>
+        <div class="svg-viewer border border-slate-800 rounded-lg bg-slate-900/60 p-4 flex items-center justify-center min-h-[220px]">
+          ${svgContent}
+        </div>
+      `;
+      card.innerHTML = header;
+      return card;
+    }
+
+    // --- GENERADOR SVG: BASE ---
+    function createBaseSVG(bleacherDepth) {
+      const v = getOctagonVertices(0);
+      const iv = getOctagonVertices(bleacherDepth);
+      
+      // Ajustar escala para que quepa en un cuadro de 250px relativo en UI pero con dimensiones físicas cm reales
+      const svg = `
+        <svg viewBox="-2 -2 ${L+4} ${W+4}" width="100%" height="200" class="overflow-visible" xmlns="http://www.w3.org/2000/svg">
+          <!-- Dibujo base -->
+          <polygon points="
+            ${v[0].x},${v[0].z} ${v[1].x},${v[1].z} ${v[2].x},${v[2].z} ${v[3].x},${v[3].z} 
+            ${v[4].x},${v[4].z} ${v[5].x},${v[5].z} ${L/2+E/2},${W-bleacherDepth} ${L/2-E/2},${W-bleacherDepth}
+            ${v[6].x},${v[6].z} ${v[7].x},${v[7].z} ${v[8].x},${v[8].z} ${v[9].x},${v[9].z}
+          " fill="none" stroke="#f1f5f9" stroke-width="0.3" />
+          
+          <!-- Línea discontinua indicando el borde del campo de juego verde -->
+          <polygon points="
+            ${iv[0].x},${iv[0].z} ${iv[1].x},${iv[1].z} ${iv[2].x},${iv[2].z} ${iv[3].x},${iv[3].z} 
+            ${iv[4].x},${iv[4].z} ${iv[5].x},${iv[5].z} ${iv[6].x},${iv[6].z} ${iv[7].x},${iv[7].z}
+            ${iv[8].x},${iv[8].z} ${iv[9].x},${iv[9].z}
+          " fill="rgba(77, 124, 15, 0.15)" stroke="#4d7c0f" stroke-width="0.15" stroke-dasharray="0.6 0.4" />
+          
+          <!-- Cotas (medidas escritas) -->
+          <text x="${L/2}" y="${-0.6}" fill="#f59e0b" font-size="2" text-anchor="middle" font-weight="bold">${L} cm</text>
+          <line x1="0" y1="-0.5" x2="${L}" y2="-0.5" stroke="#f59e0b" stroke-width="0.1" />
+          
+          <text x="${-1.2}" y="${W/2}" fill="#f59e0b" font-size="2" text-anchor="middle" font-weight="bold" transform="rotate(-90 ${-1.2} ${W/2})">${W} cm</text>
+          <line x1="-0.8" y1="0" x2="-0.8" y2="${W}" stroke="#f59e0b" stroke-width="0.1" />
+
+          <!-- Cota entrada -->
+          <line x1="${L/2-E/2}" y1="${W+0.8}" x2="${L/2+E/2}" y2="${W+0.8}" stroke="#f59e0b" stroke-width="0.1" />
+          <text x="${L/2}" y="${W+2}" fill="#f59e0b" font-size="1.8" text-anchor="middle">Entrada E: ${E} cm</text>
+
+          <!-- Cota esquinas -->
+          <text x="${K/2}" y="${K/2 - 0.5}" fill="#94a3b8" font-size="1.5" text-anchor="middle" transform="rotate(45 ${K/2} ${K/2})">K: ${K} cm</text>
+        </svg>
+      `;
+      return svg;
+    }
+
+    // --- GENERADOR SVG: PAREDES SEGMENTADAS ---
+    function createSegmentedWallsSVG() {
+      const baseLen = L - 2 * K;
+      const diagLen = Math.round(K * Math.sqrt(2) * 10) / 10;
+      const sideLen = W - 2 * K;
+      const frontLen = (L - 2 * K - E) / 2;
+
+      // Dibujar los rectángulos correspondientes a cada tramo
+      const svg = `
+        <svg viewBox="0 0 100 60" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+          <!-- Rectángulo 1: Trasera (1 de esta) -->
+          <g transform="translate(5, 5)">
+            <rect x="0" y="0" width="${baseLen}" height="${H}" fill="none" stroke="#f1f5f9" stroke-width="0.3" />
+            <text x="${baseLen/2}" y="${H/2}" fill="#f1f5f9" font-size="2.5" text-anchor="middle">Trasera</text>
+            <text x="${baseLen/2}" y="${H + 3}" fill="#f59e0b" font-size="2" text-anchor="middle">${baseLen} x ${H} cm (x1)</text>
+          </g>
+          
+          <!-- Rectángulo 2: Diagonales (4 de estas) -->
+          <g transform="translate(60, 5)">
+            <rect x="0" y="0" width="${diagLen}" height="${H}" fill="none" stroke="#f1f5f9" stroke-width="0.3" />
+            <text x="${diagLen/2}" y="${H/2}" fill="#f1f5f9" font-size="2.5" text-anchor="middle">Bisel</text>
+            <text x="${diagLen/2}" y="${H + 3}" fill="#f59e0b" font-size="2" text-anchor="middle">${diagLen} x ${H} cm (x4)</text>
+          </g>
+
+          <!-- Rectángulo 3: Laterales (2 de estas) -->
+          <g transform="translate(5, 30)">
+            <rect x="0" y="0" width="${sideLen}" height="${H}" fill="none" stroke="#f1f5f9" stroke-width="0.3" />
+            <text x="${sideLen/2}" y="${H/2}" fill="#f1f5f9" font-size="2.5" text-anchor="middle">Lateral</text>
+            <text x="${sideLen/2}" y="${H + 3}" fill="#f59e0b" font-size="2" text-anchor="middle">${sideLen} x ${H} cm (x2)</text>
+          </g>
+
+          <!-- Rectángulo 4: Frontales (2 de estas) -->
+          <g transform="translate(55, 30)">
+            <rect x="0" y="0" width="${frontLen}" height="${H}" fill="none" stroke="#f1f5f9" stroke-width="0.3" />
+            <text x="${frontLen/2}" y="${H/2}" fill="#f1f5f9" font-size="2.5" text-anchor="middle">Frontal</text>
+            <text x="${frontLen/2}" y="${H + 3}" fill="#f59e0b" font-size="2" text-anchor="middle">${frontLen} x ${H} cm (x2)</text>
+          </g>
+        </svg>
+      `;
+      return svg;
+    }
+
+    // --- GENERADOR SVG: PARED EXTERIOR CONTINUA ---
+    function createContinuousWallSVG() {
+      const baseLen = L - 2 * K;
+      const diagLen = K * Math.sqrt(2);
+      const sideLen = W - 2 * K;
+      const frontLen = (L - 2 * K - E) / 2;
+
+      // Calcular posiciones de doblez
+      const folds = [
+        frontLen,
+        frontLen + diagLen,
+        frontLen + diagLen + sideLen,
+        frontLen + 2 * diagLen + sideLen,
+        frontLen + 2 * diagLen + sideLen + baseLen,
+        frontLen + 3 * diagLen + sideLen + baseLen,
+        frontLen + 3 * diagLen + 2 * sideLen + baseLen,
+        frontLen + 4 * diagLen + 2 * sideLen + baseLen
+      ];
+      
+      const totalLen = folds[7] + frontLen;
+
+      // Dibujar tira larga con líneas de doblez discontinuas
+      let foldsDashedLines = '';
+      folds.forEach(f => {
+        foldsDashedLines += `<line x1="${f}" y1="0" x2="${f}" y2="${H}" stroke="#ef4444" stroke-width="0.25" stroke-dasharray="0.6 0.4" />`;
+      });
+
+      const svg = `
+        <svg viewBox="-5 -2 ${totalLen + 10} ${H + 12}" width="100%" height="160" xmlns="http://www.w3.org/2000/svg">
+          <!-- Borde exterior de corte -->
+          <rect x="0" y="0" width="${totalLen}" height="${H}" fill="none" stroke="#f1f5f9" stroke-width="0.4" />
+          
+          <!-- Dobleces -->
+          ${foldsDashedLines}
+
+          <!-- Cota total -->
+          <line x1="0" y1="${H + 1.5}" x2="${totalLen}" y2="${H + 1.5}" stroke="#f59e0b" stroke-width="0.1" />
+          <text x="${totalLen/2}" y="${H + 4}" fill="#f59e0b" font-size="2.5" text-anchor="middle" font-weight="bold">Tira Total de Pared: ${Math.round(totalLen*10)/10} cm x ${H} cm</text>
+          
+          <!-- Etiquetas de segmentos -->
+          <text x="${frontLen/2}" y="${H/2}" fill="#94a3b8" font-size="1.8" text-anchor="middle">Front</text>
+          <text x="${frontLen + diagLen/2}" y="${H/2}" fill="#94a3b8" font-size="1.8" text-anchor="middle">Bisel</text>
+          <text x="${frontLen + diagLen + sideLen/2}" y="${H/2}" fill="#94a3b8" font-size="1.8" text-anchor="middle">Lat</text>
+          <text x="${frontLen + 2*diagLen + sideLen + baseLen/2}" y="${H/2}" fill="#94a3b8" font-size="1.8" text-anchor="middle">Atrás</text>
+        </svg>
+      `;
+      return svg;
+    }
+
+    // --- GENERADOR SVG: GRADAS PLEGABLES ---
+    function createGradaSVG(type, outerLength, bleacherDepth) {
+      const stepDist = hr + wd;
+      const Hflat = N * stepDist + hr; // Altura desdoblada total: N huellas + (N+1) contrahuellas
+      
+      // Coordenadas
+      let points = [];
+      let foldLines = [];
+
+      // Función auxiliar para obtener el ancho en s (profundidad desde pared exterior)
+      function getWidthAtS(s) {
+        if (type === 'front-right' || type === 'front-left') {
+          return outerLength - s * tg225; // Solo un extremo en diagonal, el otro a 90°
+        }
+        return outerLength - 2 * s * tg225; // Doble corte diagonal en extremos
+      }
+
+      // 1. Calcular puntos de contorno e hilos de doblez
+      // Empezamos desde abajo (s = bleacherDepth) y subimos hacia la pared (s = 0)
+      for (let i = 0; i <= N; i++) {
+        const sInner = (N - i) * wd;
+        const sPrev = (N - i + 1) * wd;
+        
+        const yStart = i * stepDist; // Inicio de Riser i
+        const yEnd = yStart + hr;     // Fin de Riser i / Inicio de Tread i
+        
+        // Risers (rectangulares)
+        const wRiser = getWidthAtS(sPrev);
+        
+        if (type === 'front-left') {
+          // Abertura recta en X=0 (derecha en el espejo)
+          points.push({ x: 0, y: yStart });
+          points.push({ x: 0, y: yEnd });
+          // Lado izquierdo es la diagonal
+          const maxWidth = getWidthAtS(0);
+          points.unshift({ x: maxWidth - wRiser, y: yStart });
+          points.unshift({ x: maxWidth - wRiser, y: yEnd });
+        } else if (type === 'front-right') {
+          // Abertura recta en X=0 (izquierda)
+          points.push({ x: wRiser, y: yStart });
+          points.push({ x: wRiser, y: yEnd });
+          points.unshift({ x: 0, y: yStart });
+          points.unshift({ x: 0, y: yEnd });
+        } else {
+          // Piezas simétricas
+          points.push({ x: wRiser / 2, y: yStart });
+          points.push({ x: wRiser / 2, y: yEnd });
+          points.unshift({ x: -wRiser / 2, y: yStart });
+          points.unshift({ x: -wRiser / 2, y: yEnd });
+        }
+
+        // Doblez al inicio de la huella (Y = yEnd)
+        if (i < N) {
+          foldLines.push({ y: yEnd, wStart: wRiser, wEnd: wRiser });
+        }
+
+        // Treads (trapezoidales)
+        if (i < N) {
+          const yTreadEnd = yEnd + wd;
+          const wTread = getWidthAtS(sInner);
+          
+          if (type === 'front-left') {
+            points.push({ x: 0, y: yTreadEnd });
+            const maxWidth = getWidthAtS(0);
+            points.unshift({ x: maxWidth - wTread, y: yTreadEnd });
+          } else if (type === 'front-right') {
+            points.push({ x: wTread, y: yTreadEnd });
+            points.unshift({ x: 0, y: yTreadEnd });
+          } else {
+            points.push({ x: wTread / 2, y: yTreadEnd });
+            points.unshift({ x: -wTread / 2, y: yTreadEnd });
+          }
+
+          // Doblez al inicio de la siguiente contrahuella (Y = yTreadEnd)
+          foldLines.push({ y: yTreadEnd, wStart: wTread, wEnd: wTread });
+        }
+      }
+
+      // Ordenar puntos del contorno perimetral para cerrar el polígono
+      // El array 'points' tiene la mitad izquierda y mitad derecha separadas.
+      // Ya están ordenados en contra-reloj en el lado izquierdo y reloj en el derecho.
+      // Sólo los unimos en cadena cerrada.
+      const polyPoints = points.map(p => `${Math.round(p.x*100)/100},${Math.round(p.y*100)/100}`).join(' ');
+
+      // Configuración del ViewBox
+      let minX, maxX;
+      if (type === 'front-right' || type === 'front-left') {
+        minX = -1;
+        maxX = outerLength + 1;
+      } else {
+        minX = -outerLength / 2 - 1;
+        maxX = outerLength / 2 + 1;
+      }
+
+      // Generar líneas de doblez discontinuas en SVG
+      let foldsSVG = '';
+      foldLines.forEach(f => {
+        if (type === 'front-left') {
+          const maxWidth = getWidthAtS(0);
+          foldsSVG += `<line x1="${maxWidth - f.wStart}" y1="${f.y}" x2="${maxWidth}" y2="${f.y}" stroke="#ef4444" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+        } else if (type === 'front-right') {
+          foldsSVG += `<line x1="0" y1="${f.y}" x2="${f.wStart}" y2="${f.y}" stroke="#ef4444" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+        } else {
+          foldsSVG += `<line x1="${-f.wStart/2}" y1="${f.y}" x2="${f.wStart/2}" y2="${f.y}" stroke="#ef4444" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+        }
+      });
+
+      const svg = `
+        <svg viewBox="${minX} -2 ${maxX - minX} ${Hflat + 4}" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+          <!-- Plantilla plegable de corte -->
+          <polygon points="${polyPoints}" fill="none" stroke="#f1f5f9" stroke-width="0.25" />
+          
+          <!-- Líneas de pliegue -->
+          ${foldsSVG}
+          
+          <!-- Etiquetas -->
+          <text x="${(type === 'front-right' || type === 'front-left') ? outerLength/2 : 0}" y="${Hflat/2}" fill="#94a3b8" font-size="2" text-anchor="middle" font-weight="bold">Grada: ${type.toUpperCase()}</text>
+          
+          <!-- Flecha de dirección (hacia pared) -->
+          <line x1="${(type === 'front-right' || type === 'front-left') ? outerLength/2 : 0}" y1="${Hflat - 2}" x2="${(type === 'front-right' || type === 'front-left') ? outerLength/2 : 0}" y2="2" stroke="rgba(255,255,255,0.15)" stroke-width="0.25" />
+          <polygon points="${(type === 'front-right' || type === 'front-left') ? outerLength/2 : 0},1.5 ${(type === 'front-right' || type === 'front-left') ? outerLength/2 - 0.4 : -0.4},2.5 ${(type === 'front-right' || type === 'front-left') ? outerLength/2 + 0.4 : 0.4},2.5" fill="rgba(255,255,255,0.15)" />
+          
+          <!-- Cotas clave -->
+          <text x="${(type === 'front-right' || type === 'front-left') ? outerLength/2 : 0}" y="${-0.6}" fill="#f59e0b" font-size="1.5" text-anchor="middle">Largo Borde Exterior: ${Math.round(outerLength*10)/10} cm</text>
+          <text x="${(type === 'front-right' || type === 'front-left') ? outerLength/2 : 0}" y="${Hflat + 1.6}" fill="#f59e0b" font-size="1.5" text-anchor="middle">Alto Desplegado: ${Math.round(Hflat*10)/10} cm</text>
+        </svg>
+      `;
+      return svg;
+    }
+
+    // --- GENERADOR SVG: COSTILLAS ---
+    function createRibsSVG() {
+      const ribW = N * wd;
+      const ribH = N * hr;
+      
+      // Dibujar el contorno del perfil de escalera
+      let stepPoints = [];
+      stepPoints.push({ x: 0, y: 0 }); // origen inferior izquierdo
+      stepPoints.push({ x: 0, y: ribH }); // arriba de la pared exterior
+      
+      for (let i = 0; i < N; i++) {
+        // En cada paso: ir a la derecha y luego bajar
+        const xStart = i * wd;
+        const xEnd = (i + 1) * wd;
+        const yTop = ribH - i * hr;
+        const yBottom = ribH - (i + 1) * hr;
+        
+        stepPoints.push({ x: xEnd, y: yTop });
+        stepPoints.push({ x: xEnd, y: yBottom });
+      }
+      
+      const polyPoints = stepPoints.map(p => `${p.x},${p.y}`).join(' ');
+
+      const svg = `
+        <svg viewBox="-2 -2 ${ribW + 4} ${ribH + 6}" width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+          <!-- Perfil costilla -->
+          <polygon points="${polyPoints}" fill="none" stroke="#f1f5f9" stroke-width="0.25" />
+          
+          <text x="${ribW/2}" y="${ribH/2 + 2}" fill="#94a3b8" font-size="1.8" text-anchor="middle">Perfil Soporte</text>
+          
+          <!-- Cotas -->
+          <text x="${ribW/2}" y="${ribH + 2}" fill="#f59e0b" font-size="1.5" text-anchor="middle">Base: ${ribW} cm</text>
+          <text x="${-1.2}" y="${ribH/2}" fill="#f59e0b" font-size="1.5" text-anchor="middle" transform="rotate(-90 ${-1.2} ${ribH/2})">Alto: ${ribH} cm</text>
+          
+          <!-- Cantidad recomendada -->
+          <text x="${ribW/2}" y="${ribH + 3.8}" fill="#34d399" font-size="1.5" text-anchor="middle" font-weight="bold">Corta: 14 unidades</text>
+        </svg>
+      `;
+      return svg;
+    }
+
+    // DESCARGAR UN ARCHIVO SVG INDIVIDUAL
+    function downloadSVG(filename, svgContent) {
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // DESCARGAR TODOS LOS SVGs
+    function downloadAllSVGs() {
+      const bleacherDepth = N * wd;
+      const files = [
+        { name: '01_base_estadio.svg', content: createBaseSVG(bleacherDepth) },
+        { name: '02_paredes.svg', content: document.getElementById('select-walls').value === 'continuous' ? createContinuousWallSVG() : createSegmentedWallsSVG() },
+        { name: '03_grada_trasera.svg', content: createGradaSVG('back', L - 2 * K, bleacherDepth) },
+        { name: '04_grada_lateral.svg', content: createGradaSVG('side', W - 2 * K, bleacherDepth) },
+        { name: '05_grada_diagonal.svg', content: createGradaSVG('diagonal', K * Math.sqrt(2), bleacherDepth) },
+        { name: '06_grada_delantera_derecha.svg', content: createGradaSVG('front-right', (L - 2 * K - E) / 2, bleacherDepth) },
+        { name: '07_grada_delantera_izquierda.svg', content: createGradaSVG('front-left', (L - 2 * K - E) / 2, bleacherDepth) },
+        { name: '08_costillas_soporte.svg', content: createRibsSVG() }
+      ];
+
+      files.forEach((file, index) => {
+        // Retrasamos la descarga ligeramente para evitar bloqueos del navegador
+        setTimeout(() => {
+          downloadSVG(file.name, file.content);
+        }, index * 200);
+      });
+    }
+
+    // SISTEMA DE IMPRESIÓN A ESCALA REAL (1:1) EN BALDOSAS (TILED PRINTING)
+    function triggerPrintLayout() {
+      const paperSize = document.getElementById('select-paper').value;
+      const wallsMode = document.getElementById('select-walls').value;
+      const bleacherDepth = N * wd;
+      
+      // Dimensiones físicas del papel en cm
+      const paperW = paperSize === 'A4' ? 29.7 : 27.94; // Carta
+      const paperH = paperSize === 'A4' ? 21.0 : 21.59;
+      const margin = 1.0; // margen de seguridad en cm
+      
+      const printableW = paperW - 2 * margin;
+      const printableH = paperH - 2 * margin;
+
+      // Abrir una ventana nueva para imprimir con estilo limpio de baldosas
+      const printWin = window.open('', '_blank');
+      
+      let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Impresión de Plantillas 1:1 - EstadioCraft 3D</title>
+          <style>
+            @page {
+              size: landscape;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              background: #f1f5f9;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .page-container {
+              width: ${paperW}cm;
+              height: ${paperH}cm;
+              position: relative;
+              background: white;
+              page-break-after: always;
+              box-sizing: border-box;
+              border: 1px dashed #cbd5e1; /* visible en previsualización de pantalla, no en impresión */
+              overflow: hidden;
+            }
+            .printable-area {
+              position: absolute;
+              left: ${margin}cm;
+              top: ${margin}cm;
+              width: ${printableW}cm;
+              height: ${printableH}cm;
+              border: 1px solid #e2e8f0;
+              box-sizing: border-box;
+            }
+            .page-info {
+              position: absolute;
+              bottom: 0.2cm;
+              left: ${margin}cm;
+              font-size: 8pt;
+              color: #64748b;
+            }
+            .registration-mark {
+              position: absolute;
+              width: 0.8cm;
+              height: 0.8cm;
+            }
+            .rm-tl { left: ${margin - 0.4}cm; top: ${margin - 0.4}cm; }
+            .rm-tr { right: ${margin - 0.4}cm; top: ${margin - 0.4}cm; }
+            .rm-bl { left: ${margin - 0.4}cm; bottom: ${margin - 0.4}cm; }
+            .rm-br { right: ${margin - 0.4}cm; bottom: ${margin - 0.4}cm; }
+            
+            @media print {
+              body {
+                background: white;
+              }
+              .page-container {
+                border: none;
+              }
+              .printable-area {
+                border: none; /* Quitar borde gris al imprimir */
+              }
+            }
+            
+            /* Encabezado temporal para pantalla */
+            .no-print-bar {
+              background: #0f172a;
+              color: white;
+              padding: 12px 24px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 11pt;
+              border-bottom: 2px solid #d97706;
+            }
+            .btn-action {
+              background: #d97706;
+              color: white;
+              border: none;
+              padding: 6px 16px;
+              border-radius: 6px;
+              font-weight: bold;
+              cursor: pointer;
+            }
+            .btn-action:hover {
+              background: #b45309;
+            }
+            
+            @media print {
+              .no-print-bar {
+                display: none !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="no-print-bar">
+            <span>🏟️ <strong>EstadioCraft 3D:</strong> Listo para imprimir a escala real 1:1. Configura tu impresora en orientación <strong>Horizontal / Landscape</strong> y escala al <strong>100%</strong>.</span>
+            <button onclick="window.print()" class="btn-action">Imprimir Planos ahora</button>
+          </div>
+      `;
+
+      // 1. BALDOSAS PARA LA BASE DEL ESTADIO (L x W)
+      const baseCols = Math.ceil(L / printableW);
+      const baseRows = Math.ceil(W / printableH);
+      
+      const v = getOctagonVertices(0);
+      const iv = getOctagonVertices(bleacherDepth);
+
+      for (let r = 0; r < baseRows; r++) {
+        for (let c = 0; c < baseCols; c++) {
+          const pageTitle = `Base Estadio [Fila ${r+1}, Col ${c+1}]`;
+          const basePolyPoints = `
+            ${v[0].x},${v[0].z} ${v[1].x},${v[1].z} ${v[2].x},${v[2].z} ${v[3].x},${v[3].z} 
+            ${v[4].x},${v[4].z} ${v[5].x},${v[5].z} ${L/2+E/2},${W-bleacherDepth} ${L/2-E/2},${W-bleacherDepth}
+            ${v[6].x},${v[6].z} ${v[7].x},${v[7].z} ${v[8].x},${v[8].z} ${v[9].x},${v[9].z}
+          `;
+
+          const fieldPolyPoints = `
+            ${iv[0].x},${iv[0].z} ${iv[1].x},${iv[1].z} ${iv[2].x},${iv[2].z} ${iv[3].x},${iv[3].z} 
+            ${iv[4].x},${iv[4].z} ${iv[5].x},${iv[5].z} ${iv[6].x},${iv[6].z} ${iv[7].x},${iv[7].z}
+            ${iv[8].x},${iv[8].z} ${iv[9].x},${iv[9].z}
+          `;
+
+          // Generar la página
+          html += generateTiledPageHTML(
+            pageTitle, r, c, printableW, printableH, L, W,
+            `
+              <!-- Base exterior -->
+              <polygon points="${basePolyPoints}" fill="none" stroke="#000" stroke-width="0.3" />
+              <!-- Línea del campo de juego -->
+              <polygon points="${fieldPolyPoints}" fill="none" stroke="#666" stroke-width="0.15" stroke-dasharray="0.5 0.3" />
+              <!-- Anotaciones adicionales en el centro -->
+              <text x="${L/2}" y="${W/2}" fill="#888" font-size="2" text-anchor="middle">ÁREA DEL CAMPO</text>
+            `,
+            paperW, paperH
+          );
+        }
+      }
+
+      // 2. BALDOSAS PARA LA PARED EXTERIOR (Si es continua, es muy larga y requiere baldosas)
+      if (wallsMode === 'continuous') {
+        const baseLen = L - 2 * K;
+        const diagLen = K * Math.sqrt(2);
+        const sideLen = W - 2 * K;
+        const frontLen = (L - 2 * K - E) / 2;
+
+        const folds = [
+          frontLen,
+          frontLen + diagLen,
+          frontLen + diagLen + sideLen,
+          frontLen + 2 * diagLen + sideLen,
+          frontLen + 2 * diagLen + sideLen + baseLen,
+          frontLen + 3 * diagLen + sideLen + baseLen,
+          frontLen + 3 * diagLen + 2 * sideLen + baseLen,
+          frontLen + 4 * diagLen + 2 * sideLen + baseLen
+        ];
+        const totalWallLen = folds[7] + frontLen;
+        
+        const wallCols = Math.ceil(totalWallLen / printableW);
+        const wallRows = Math.ceil(H / printableH);
+
+        for (let r = 0; r < wallRows; r++) {
+          for (let c = 0; c < wallCols; c++) {
+            const pageTitle = `Pared Exterior Continua [Baldosa ${c+1} de ${wallCols}]`;
+            
+            // Crear las líneas de pliegues en formato SVG para esta baldosa
+            let foldsLinesSVG = '';
+            folds.forEach(f => {
+              foldsLinesSVG += `<line x1="${f}" y1="0" x2="${f}" y2="${H}" stroke="#ff0000" stroke-width="0.25" stroke-dasharray="0.5 0.3" />`;
+            });
+
+            html += generateTiledPageHTML(
+              pageTitle, r, c, printableW, printableH, totalWallLen, H,
+              `
+                <!-- Tira rectangular exterior -->
+                <rect x="0" y="0" width="${totalWallLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+                <!-- Líneas de dobles (Rojas) -->
+                ${foldsLinesSVG}
+              `,
+              paperW, paperH
+            );
+          }
+        }
+      } else {
+        // Paredes segmentadas (Rectángulos pequeños)
+        // Agrupamos en páginas para ahorrar papel
+        const baseLen = L - 2 * K;
+        const diagLen = K * Math.sqrt(2);
+        const sideLen = W - 2 * K;
+        const frontLen = (L - 2 * K - E) / 2;
+        
+        // Hoja 1: Trasera (baseLen x H)
+        html += generateSinglePiecePageHTML("Pared Segmentada - Trasera (x1)", baseLen, H, `
+          <rect x="0" y="0" width="${baseLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+          <text x="${baseLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="2.5" text-anchor="middle">PARED TRASERA</text>
+        `, paperW, paperH, printableW, printableH);
+
+        // Hoja 2: Laterales (x2) y Frontales (x2)
+        html += generateSinglePiecePageHTML("Paredes Segmentadas - Laterales (x2) y Frontales (x2)", printableW, printableH, `
+          <!-- Lateral 1 -->
+          <g transform="translate(1, 1)">
+            <rect x="0" y="0" width="${sideLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${sideLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="2" text-anchor="middle">LATERAL 1</text>
+          </g>
+          <!-- Lateral 2 -->
+          <g transform="translate(1, ${H + 2})">
+            <rect x="0" y="0" width="${sideLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${sideLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="2" text-anchor="middle">LATERAL 2</text>
+          </g>
+          <!-- Frontal 1 -->
+          <g transform="translate(${sideLen + 2}, 1)">
+            <rect x="0" y="0" width="${frontLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${frontLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="2" text-anchor="middle">FRONTAL 1</text>
+          </g>
+          <!-- Frontal 2 -->
+          <g transform="translate(${sideLen + 2}, ${H + 2})">
+            <rect x="0" y="0" width="${frontLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${frontLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="2" text-anchor="middle">FRONTAL 2</text>
+          </g>
+        `, paperW, paperH, printableW, printableH);
+
+        // Hoja 3: Biseles (x4) y Entrada (x2)
+        html += generateSinglePiecePageHTML("Paredes Segmentadas - Diagonales (x4) y Entrada (x2)", printableW, printableH, `
+          <!-- Bisel 1 a 4 en un grid -->
+          <g transform="translate(1, 1)">
+            <rect x="0" y="0" width="${diagLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${diagLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="1.8" text-anchor="middle">BISEL 1</text>
+          </g>
+          <g transform="translate(${diagLen + 1.5}, 1)">
+            <rect x="0" y="0" width="${diagLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${diagLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="1.8" text-anchor="middle">BISEL 2</text>
+          </g>
+          <g transform="translate(1, ${H + 2})">
+            <rect x="0" y="0" width="${diagLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${diagLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="1.8" text-anchor="middle">BISEL 3</text>
+          </g>
+          <g transform="translate(${diagLen + 1.5}, ${H + 2})">
+            <rect x="0" y="0" width="${diagLen}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${diagLen/2}" y="${H/2 + 0.8}" fill="#000" font-size="1.8" text-anchor="middle">BISEL 4</text>
+          </g>
+          <!-- Entrada laterales de canal (x2) (Tamaño: bleacherDepth x H) -->
+          <g transform="translate(${2 * diagLen + 3}, 1)">
+            <rect x="0" y="0" width="${bleacherDepth}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${bleacherDepth/2}" y="${H/2 + 0.8}" fill="#000" font-size="1.8" text-anchor="middle">ENTRADA L</text>
+          </g>
+          <g transform="translate(${2 * diagLen + 3}, ${H + 2})">
+            <rect x="0" y="0" width="${bleacherDepth}" height="${H}" fill="none" stroke="#000" stroke-width="0.3" />
+            <text x="${bleacherDepth/2}" y="${H/2 + 0.8}" fill="#000" font-size="1.8" text-anchor="middle">ENTRADA R</text>
+          </g>
+        `, paperW, paperH, printableW, printableH);
+      }
+
+      // 3. GRADAS EN ACORDEÓN
+      // Grada Trasera (Suele requerir baldosas si supera 27.7cm)
+      const backGradaUnfoldedW = L - 2 * K;
+      const stepDist = hr + wd;
+      const bleacherUnfoldedH = N * stepDist + hr;
+      
+      const gCols = Math.ceil(backGradaUnfoldedW / printableW);
+      const gRows = Math.ceil(bleacherUnfoldedH / printableH);
+
+      for (let r = 0; r < gRows; r++) {
+        for (let c = 0; c < gCols; c++) {
+          const pageTitle = `Grada Trasera [Baldosa ${c+1} de ${gCols}]`;
+          const gradaSVGInner = getGradaSVGContent('back', L - 2 * K, bleacherDepth);
+          
+          html += generateTiledPageHTML(
+            pageTitle, r, c, printableW, printableH, backGradaUnfoldedW, bleacherUnfoldedH,
+            gradaSVGInner,
+            paperW, paperH
+          );
+        }
+      }
+
+      // Gradas Laterales (Caben juntas en una sola hoja)
+      const sideGradaUnfoldedW = W - 2 * K;
+      html += generateSinglePiecePageHTML("Gradas Laterales (Corta 2)", printableW, printableH, `
+        <!-- Grada Lateral 1 -->
+        <g transform="translate(1, 1)">
+          ${getGradaSVGContent('side', sideGradaUnfoldedW, bleacherDepth)}
+        </g>
+      `, paperW, paperH, printableW, printableH);
+
+      // Gradas Diagonales (Corta 4) (Cabrán en 2 páginas de a 2)
+      const diagGradaUnfoldedW = K * Math.sqrt(2);
+      html += generateSinglePiecePageHTML("Gradas Diagonales (Corta 4) - Parte A", printableW, printableH, `
+        <g transform="translate(1, 1)">
+          ${getGradaSVGContent('diagonal', diagGradaUnfoldedW, bleacherDepth)}
+        </g>
+      `, paperW, paperH, printableW, printableH);
+      
+      html += generateSinglePiecePageHTML("Gradas Diagonales (Corta 4) - Parte B", printableW, printableH, `
+        <g transform="translate(1, 1)">
+          ${getGradaSVGContent('diagonal', diagGradaUnfoldedW, bleacherDepth)}
+        </g>
+      `, paperW, paperH, printableW, printableH);
+
+      // Gradas Delanteras (Par Izquierdo y Derecho)
+      const frontGradaUnfoldedW = (L - 2 * K - E) / 2;
+      html += generateSinglePiecePageHTML("Gradas Delanteras (Izquierda y Derecha)", printableW, printableH, `
+        <!-- Delantera Derecha -->
+        <g transform="translate(1, 1)">
+          ${getGradaSVGContent('front-right', frontGradaUnfoldedW, bleacherDepth)}
+        </g>
+        <!-- Delantera Izquierda (Espejo) -->
+        <g transform="translate(${frontGradaUnfoldedW + 2}, 1)">
+          ${getGradaSVGContent('front-left', frontGradaUnfoldedW, bleacherDepth)}
+        </g>
+      `, paperW, paperH, printableW, printableH);
+
+      // 4. COSTILLAS DE SOPORTE (14 de ellas)
+      // Cada costilla es (N*wd) x (N*hr). Si N=3, wd=3, hr=3, mide 9x9cm.
+      // Caben unas 8 por página. En 2 páginas caben las 14.
+      const ribW = N * wd;
+      const ribH = N * hr;
+      
+      let stepPoints = [];
+      stepPoints.push({ x: 0, y: 0 }, { x: 0, y: ribH });
+      for (let i = 0; i < N; i++) {
+        stepPoints.push({ x: (i+1)*wd, y: ribH - i*hr });
+        stepPoints.push({ x: (i+1)*wd, y: ribH - (i+1)*hr });
+      }
+      const ribPoly = stepPoints.map(p => `${p.x},${p.y}`).join(' ');
+
+      // Página 1 Costillas (8 unidades)
+      let ribsContent1 = '';
+      for(let r=0; r<2; r++) {
+        for(let c=0; c<4; c++) {
+          const index = r*4 + c + 1;
+          ribsContent1 += `
+            <g transform="translate(${c * (ribW + 1) + 1}, ${r * (ribH + 1.5) + 1})">
+              <polygon points="${ribPoly}" fill="none" stroke="#000" stroke-width="0.3" />
+              <text x="${ribW/2}" y="${ribH/2 + 1.5}" fill="#000" font-size="1.5" text-anchor="middle">Costilla ${index}</text>
+            </g>
+          `;
+        }
+      }
+      html += generateSinglePiecePageHTML("Costillas de Soporte (1 de 2) - Corta 8", printableW, printableH, ribsContent1, paperW, paperH, printableW, printableH);
+
+      // Página 2 Costillas (6 unidades restantes)
+      let ribsContent2 = '';
+      for(let r=0; r<2; r++) {
+        for(let c=0; c<3; c++) {
+          const index = r*3 + c + 9;
+          ribsContent2 += `
+            <g transform="translate(${c * (ribW + 1.5) + 1}, ${r * (ribH + 1.5) + 1})">
+              <polygon points="${ribPoly}" fill="none" stroke="#000" stroke-width="0.3" />
+              <text x="${ribW/2}" y="${ribH/2 + 1.5}" fill="#000" font-size="1.5" text-anchor="middle">Costilla ${index}</text>
+            </g>
+          `;
+        }
+      }
+      html += generateSinglePiecePageHTML("Costillas de Soporte (2 de 2) - Corta 6", printableW, printableH, ribsContent2, paperW, paperH, printableW, printableH);
+
+      // Cerrar HTML e imprimir automáticamente al cargar
+      html += `
+        </body>
+        </html>
+      `;
+
+      printWin.document.write(html);
+      printWin.document.close();
+    }
+
+    // GENERAR CONTENIDO SVG INTERNO DE GRADAS PARA LA IMPRESIÓN 1:1
+    function getGradaSVGContent(type, outerLength, bleacherDepth) {
+      const stepDist = hr + wd;
+      const Hflat = N * stepDist + hr;
+      let points = [];
+      let foldLines = [];
+
+      function getWidthAtS(s) {
+        if (type === 'front-right' || type === 'front-left') {
+          return outerLength - s * tg225;
+        }
+        return outerLength - 2 * s * tg225;
+      }
+
+      for (let i = 0; i <= N; i++) {
+        const sInner = (N - i) * wd;
+        const sPrev = (N - i + 1) * wd;
+        const yStart = i * stepDist;
+        const yEnd = yStart + hr;
+        const wRiser = getWidthAtS(sPrev);
+        
+        if (type === 'front-left') {
+          points.push({ x: 0, y: yStart }, { x: 0, y: yEnd });
+          const maxWidth = getWidthAtS(0);
+          points.unshift({ x: maxWidth - wRiser, y: yStart }, { x: maxWidth - wRiser, y: yEnd });
+        } else if (type === 'front-right') {
+          points.push({ x: wRiser, y: yStart }, { x: wRiser, y: yEnd });
+          points.unshift({ x: 0, y: yStart }, { x: 0, y: yEnd });
+        } else {
+          points.push({ x: wRiser / 2, y: yStart }, { x: wRiser / 2, y: yEnd });
+          points.unshift({ x: -wRiser / 2, y: yStart }, { x: -wRiser / 2, y: yEnd });
+        }
+
+        if (i < N) {
+          foldLines.push({ y: yEnd, wStart: wRiser });
+        }
+
+        if (i < N) {
+          const yTreadEnd = yEnd + wd;
+          const wTread = getWidthAtS(sInner);
+          
+          if (type === 'front-left') {
+            points.push({ x: 0, y: yTreadEnd });
+            const maxWidth = getWidthAtS(0);
+            points.unshift({ x: maxWidth - wTread, y: yTreadEnd });
+          } else if (type === 'front-right') {
+            points.push({ x: wTread, y: yTreadEnd });
+            points.unshift({ x: 0, y: yTreadEnd });
+          } else {
+            points.push({ x: wTread / 2, y: yTreadEnd });
+            points.unshift({ x: -wTread / 2, y: yTreadEnd });
+          }
+
+          foldLines.push({ y: yTreadEnd, wStart: wTread });
+        }
+      }
+
+      const polyPoints = points.map(p => `${p.x},${p.y}`).join(' ');
+
+      // Desplazamiento si es simétrica para centrarla en un origen 0,0 para la impresión
+      let offsetTrans = '';
+      if (type !== 'front-right' && type !== 'front-left') {
+        offsetTrans = `transform="translate(${outerLength/2}, 0)"`;
+      }
+
+      let foldsSVG = '';
+      foldLines.forEach(f => {
+        if (type === 'front-left') {
+          const maxWidth = getWidthAtS(0);
+          foldsSVG += `<line x1="${maxWidth - f.wStart}" y1="${f.y}" x2="${maxWidth}" y2="${f.y}" stroke="#ff0000" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+        } else if (type === 'front-right') {
+          foldsSVG += `<line x1="0" y1="${f.y}" x2="${f.wStart}" y2="${f.y}" stroke="#ff0000" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+        } else {
+          foldsSVG += `<line x1="${-f.wStart/2}" y1="${f.y}" x2="${f.wStart/2}" y2="${f.y}" stroke="#ff0000" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+        }
+      });
+
+      return `
+        <g ${offsetTrans}>
+          <!-- Borde de corte -->
+          <polygon points="${polyPoints}" fill="none" stroke="#000" stroke-width="0.3" />
+          <!-- Dobleces -->
+          ${foldsSVG}
+          <!-- Texto identificador -->
+          <text x="${(type==='front-right'||type==='front-left') ? outerLength/2 : 0}" y="${Hflat - 2}" fill="#000" font-size="1.8" text-anchor="middle">PLIEGO: ${type.toUpperCase()}</text>
+        </g>
+      `;
+    }
+
+    // AUXILIAR: Escribe una página A4 única con marcas de registro y un objeto en el centro
+    function generateSinglePiecePageHTML(title, itemW, itemH, innerSVGContent, paperW, paperH, printableW, printableH) {
+      // Centrar el elemento dentro de la zona de impresión
+      const dx = (printableW - itemW) / 2;
+      const dy = (printableH - itemH) / 2;
+      
+      const trans = `transform="translate(${dx}, ${dy})"`;
+
+      return `
+        <div class="page-container">
+          <div class="printable-area">
+            <svg viewBox="0 0 ${printableW} ${printableH}" width="${printableW}cm" height="${printableH}cm" xmlns="http://www.w3.org/2000/svg">
+              <g ${trans}>
+                ${innerSVGContent}
+              </g>
+            </svg>
+          </div>
+          <!-- Marcas de registro -->
+          ${drawRegMarksHTML()}
+          <div class="page-info">🏟️ EstadioCraft 3D | <strong>Pieza Única: ${title}</strong> | Escala 1:1</div>
+        </div>
+      `;
+    }
+
+    // AUXILIAR: Crea una página A4 del mosaico (Tiled page) con traducción automática para la ventana gráfica
+    function generateTiledPageHTML(title, row, col, printableW, printableH, totalW, totalH, innerSVGContent, paperW, paperH) {
+      // La traslación se encarga de desplazar la ventana sobre la pieza completa
+      const transX = -col * printableW;
+      const transY = -row * printableH;
+
+      return `
+        <div class="page-container">
+          <div class="printable-area">
+            <!-- clip-path para que no se imprima nada fuera del límite del margen de la hoja -->
+            <svg viewBox="0 0 ${printableW} ${printableH}" width="${printableW}cm" height="${printableH}cm" xmlns="http://www.w3.org/2000/svg">
+              <g transform="translate(${transX}, ${transY})">
+                ${innerSVGContent}
+              </g>
+            </svg>
+          </div>
+          <!-- Marcas de registro -->
+          ${drawRegMarksHTML()}
+          <div class="page-info">🏟️ EstadioCraft 3D | <strong>${title}</strong> [Fila ${row+1}, Col ${col+1}] | Escala 1:1 (Une las marcas de registro)</div>
+        </div>
+      `;
+    }
+
+    // Dibuja las cruces de alineación/registro en las 4 esquinas de la hoja
+    function drawRegMarksHTML() {
+      // Cruces formadas por una circunferencia y dos líneas cruzadas
+      const svgCross = `
+        <svg viewBox="-4 -4 8 8" width="0.8cm" height="0.8cm">
+          <circle cx="0" cy="0" r="2" fill="none" stroke="#64748b" stroke-width="0.2" />
+          <line x1="-3.5" y1="0" x2="3.5" y2="0" stroke="#64748b" stroke-width="0.2" />
+          <line x1="0" y1="-3.5" x2="0" y2="3.5" stroke="#64748b" stroke-width="0.2" />
+        </svg>
+      `;
+      return `
+        <div class="registration-mark rm-tl">${svgCross}</div>
+        <div class="registration-mark rm-tr">${svgCross}</div>
+        <div class="registration-mark rm-bl">${svgCross}</div>
+        <div class="registration-mark rm-br">${svgCross}</div>
+      `;
+    }
+  </script>
+</body>
+</html>
