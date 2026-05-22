@@ -999,12 +999,12 @@
       const entryWallGeo = new THREE.BoxGeometry(wallThickness, H, bleacherDepth);
       
       const leftEntryWall = new THREE.Mesh(entryWallGeo, cardMat);
-      leftEntryWall.position.set(L/2 - E/2, H/2 + 0.3, W - bleacherDepth/2 - W/2);
+      leftEntryWall.position.set(-E/2, H/2 + 0.3, W - bleacherDepth/2 - W/2);
       leftEntryWall.castShadow = true;
       stadiumGroup.add(leftEntryWall);
 
       const rightEntryWall = new THREE.Mesh(entryWallGeo, cardMat);
-      rightEntryWall.position.set(L/2 + E/2, H/2 + 0.3, W - bleacherDepth/2 - W/2);
+      rightEntryWall.position.set(E/2, H/2 + 0.3, W - bleacherDepth/2 - W/2);
       rightEntryWall.castShadow = true;
       stadiumGroup.add(rightEntryWall);
 
