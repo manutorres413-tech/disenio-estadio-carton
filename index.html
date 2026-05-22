@@ -1013,10 +1013,219 @@
       scene.add(stadiumGroup);
     }
 
+    // PLANO DE DESPIECE: Ficha de Referencia A4 Proporcional
+    function createOverviewSVG(bleacherDepth, isForPrint = false) {
+      const strokeColor = isForPrint ? "#000000" : "#f1f5f9";
+      const foldColor = isForPrint ? "#ff0000" : "#ef4444";
+      const textColor = isForPrint ? "#000000" : "#cbd5e1";
+      const bgColor = isForPrint ? "#ffffff" : "transparent";
+      
+      const stepDist = hr + wd;
+      const Hflat = N * stepDist + hr;
+      const f = Math.min(11.5 / L, 7.0 / W, 5.0 / H, 3.8 / Hflat);
+
+      function getGradaDrawingPointsAndFolds(type, outerLength) {
+        const stepDist = hr + wd;
+        const Hflat = N * stepDist + hr;
+        let points = [];
+        let foldLines = [];
+
+        function getWidthAtS(s) {
+          if (type === 'front-right' || type === 'front-left') {
+            return outerLength - s * tg225;
+          }
+          return outerLength - 2 * s * tg225;
+        }
+
+        for (let i = 0; i <= N; i++) {
+          const sInner = (N - i) * wd;
+          const sPrev = (N - i + 1) * wd;
+          const yStart = i * stepDist;
+          const yEnd = yStart + hr;
+          const wRiser = getWidthAtS(sPrev);
+          
+          if (type === 'front-left') {
+            points.push({ x: 0, y: yStart }, { x: 0, y: yEnd });
+            const maxWidth = getWidthAtS(0);
+            points.unshift({ x: maxWidth - wRiser, y: yStart }, { x: maxWidth - wRiser, y: yEnd });
+          } else if (type === 'front-right') {
+            points.push({ x: wRiser, y: yStart }, { x: wRiser, y: yEnd });
+            points.unshift({ x: 0, y: yStart }, { x: 0, y: yEnd });
+          } else {
+            points.push({ x: wRiser / 2, y: yStart }, { x: wRiser / 2, y: yEnd });
+            points.unshift({ x: -wRiser / 2, y: yStart }, { x: -wRiser / 2, y: yEnd });
+          }
+
+          if (i < N) {
+            foldLines.push({ y: yEnd, wStart: wRiser });
+          }
+
+          if (i < N) {
+            const yTreadEnd = yEnd + wd;
+            const wTread = getWidthAtS(sInner);
+            
+            if (type === 'front-left') {
+              points.push({ x: 0, y: yTreadEnd });
+              const maxWidth = getWidthAtS(0);
+              points.unshift({ x: maxWidth - wTread, y: yTreadEnd });
+            } else if (type === 'front-right') {
+              points.push({ x: wTread, y: yTreadEnd });
+              points.unshift({ x: 0, y: yTreadEnd });
+            } else {
+              points.push({ x: wTread / 2, y: yTreadEnd });
+              points.unshift({ x: -wTread / 2, y: yTreadEnd });
+            }
+
+            foldLines.push({ y: yTreadEnd, wStart: wTread });
+          }
+        }
+        return { points, foldLines, Hflat };
+      }
+
+      function drawGradaGroup(type, outerLength, x, y, label, qty) {
+        const { points, foldLines, Hflat } = getGradaDrawingPointsAndFolds(type, outerLength);
+        const polyPoints = points.map(p => `${Math.round(p.x*100)/100},${Math.round(p.y*100)/100}`).join(" ");
+        
+        let offsetTrans = "";
+        if (type !== 'front-right' && type !== 'front-left') {
+          offsetTrans = `transform="translate(${outerLength/2}, 0)"`;
+        }
+        
+        let foldsSVG = "";
+        foldLines.forEach(f => {
+          if (type === 'front-left') {
+            const maxWidth = outerLength;
+            foldsSVG += `<line x1="${maxWidth - f.wStart}" y1="${f.y}" x2="${maxWidth}" y2="${f.y}" stroke="${foldColor}" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+          } else if (type === 'front-right') {
+            foldsSVG += `<line x1="0" y1="${f.y}" x2="${f.wStart}" y2="${f.y}" stroke="${foldColor}" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+          } else {
+            foldsSVG += `<line x1="${-f.wStart/2}" y1="${f.y}" x2="${f.wStart/2}" y2="${f.y}" stroke="${foldColor}" stroke-width="0.2" stroke-dasharray="0.5 0.3" />`;
+          }
+        });
+
+        return `
+          <g transform="translate(${x}, ${y}) scale(${f})">
+            <g ${offsetTrans}>
+              <polygon points="${polyPoints}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+              ${foldsSVG}
+            </g>
+          </g>
+          <text x="${x + (outerLength/2)*f}" y="${y + Hflat*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">${label} (${qty})</text>
+          <text x="${x + (outerLength/2)*f}" y="${y + Hflat*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${Math.round(outerLength*10)/10}x${Math.round(Hflat*10)/10} cm</text>
+        `;
+      }
+
+      const v = getOctagonVertices(0);
+      const iv = getOctagonVertices(bleacherDepth);
+      const basePoints = `
+        ${v[0].x},${v[0].z} ${v[1].x},${v[1].z} ${v[2].x},${v[2].z} ${v[3].x},${v[3].z} 
+        ${v[4].x},${v[4].z} ${v[5].x},${v[5].z} ${L/2+E/2},${W-bleacherDepth} ${L/2-E/2},${W-bleacherDepth}
+        ${v[6].x},${v[6].z} ${v[7].x},${v[7].z} ${v[8].x},${v[8].z} ${v[9].x},${v[9].z}
+      `;
+      const fieldPoints = `
+        ${iv[0].x},${iv[0].z} ${iv[1].x},${iv[1].z} ${iv[2].x},${iv[2].z} ${iv[3].x},${iv[3].z} 
+        ${iv[4].x},${iv[4].z} ${iv[5].x},${iv[5].z} ${iv[6].x},${iv[6].z} ${iv[7].x},${iv[7].z}
+        ${iv[8].x},${iv[8].z} ${iv[9].x},${iv[9].z}
+      `;
+
+      const ribW = N * wd;
+      const ribH = N * hr;
+      let stepPoints = [];
+      stepPoints.push({ x: 0, y: 0 }, { x: 0, y: ribH });
+      for (let i = 0; i < N; i++) {
+        stepPoints.push({ x: (i+1)*wd, y: ribH - i*hr });
+        stepPoints.push({ x: (i+1)*wd, y: ribH - (i+1)*hr });
+      }
+      const ribPoly = stepPoints.map(p => `${p.x},${p.y}`).join(" ");
+
+      const diagLen = K * Math.sqrt(2);
+      const frontLen = (L - 2 * K - E) / 2;
+      const backLen = L - 2 * K;
+      const sideLen = W - 2 * K;
+
+      return `
+        <svg viewBox="0 0 29.7 21" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background-color: ${bgColor};">
+          <rect x="0.5" y="0.5" width="28.7" height="20" rx="0.3" fill="none" stroke="${textColor}" stroke-width="0.05" stroke-dasharray="0.3 0.2" />
+          
+          <text x="1.5" y="1.5" fill="${textColor}" font-size="0.6" font-weight="bold" text-anchor="start">PLANO DE DESPIECE / REFERENCIA DE PIEZAS</text>
+          <text x="28.2" y="1.5" fill="${textColor}" font-size="0.4" font-weight="bold" text-anchor="end">Escala: Proporcional A4 (~${Math.round(f*100)}%)</text>
+          <line x1="1.5" y1="1.7" x2="28.2" y2="1.7" stroke="${textColor}" stroke-width="0.03" />
+
+          <!-- COLUMNA IZQUIERDA -->
+          <!-- Base -->
+          <g transform="translate(1.5, 2.5) scale(${f})">
+            <polygon points="${basePoints}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+            <polygon points="${fieldPoints}" fill="none" stroke="${foldColor}" stroke-width="0.15" stroke-dasharray="0.6 0.4" />
+          </g>
+          <text x="${1.5 + (L/2)*f}" y="${2.5 + W*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">Base del Estadio (x1)</text>
+          <text x="${1.5 + (L/2)*f}" y="${2.5 + W*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${L} x ${W} cm</text>
+
+          <!-- Costilla de Soporte -->
+          <g transform="translate(1.5, 11.2) scale(${f})">
+            <polygon points="${ribPoly}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+          </g>
+          <text x="${1.5 + (ribW/2)*f}" y="${11.2 + ribH*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">Costilla de Soporte (x14)</text>
+          <text x="${1.5 + (ribW/2)*f}" y="${11.2 + ribH*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${ribW} x ${ribH} cm</text>
+
+          <!-- Pared Entrada -->
+          <g transform="translate(7.2, 11.2) scale(${f})">
+            <rect x="0" y="0" width="${bleacherDepth}" height="${H}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+          </g>
+          <text x="${7.2 + (bleacherDepth/2)*f}" y="${11.2 + H*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">Pared Canal (x2)</text>
+          <text x="${7.2 + (bleacherDepth/2)*f}" y="${11.2 + H*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${Math.round(bleacherDepth*10)/10} x ${H} cm</text>
+
+          <!-- Pared Bisel -->
+          <g transform="translate(1.5, 16.0) scale(${f})">
+            <rect x="0" y="0" width="${diagLen}" height="${H}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+          </g>
+          <text x="${1.5 + (diagLen/2)*f}" y="${16.0 + H*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">Pared Bisel (x4)</text>
+          <text x="${1.5 + (diagLen/2)*f}" y="${16.0 + H*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${Math.round(diagLen*10)/10} x ${H} cm</text>
+
+          <!-- Pared Frontal -->
+          <g transform="translate(6.5, 16.0) scale(${f})">
+            <rect x="0" y="0" width="${frontLen}" height="${H}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+          </g>
+          <text x="${6.5 + (frontLen/2)*f}" y="${16.0 + H*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">Pared Frontal (x2)</text>
+          <text x="${6.5 + (frontLen/2)*f}" y="${16.0 + H*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${Math.round(frontLen*10)/10} x ${H} cm</text>
+
+          <!-- COLUMNA DERECHA -->
+          <!-- Pared Trasera -->
+          <g transform="translate(15.0, 2.5) scale(${f})">
+            <rect x="0" y="0" width="${backLen}" height="${H}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+          </g>
+          <text x="${15.0 + (backLen/2)*f}" y="${2.5 + H*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">Pared Trasera (x1)</text>
+          <text x="${15.0 + (backLen/2)*f}" y="${2.5 + H*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${Math.round(backLen*10)/10} x ${H} cm</text>
+
+          <!-- Pared Lateral -->
+          <g transform="translate(24.0, 2.5) scale(${f})">
+            <rect x="0" y="0" width="${sideLen}" height="${H}" fill="none" stroke="${strokeColor}" stroke-width="0.3" />
+          </g>
+          <text x="${24.0 + (sideLen/2)*f}" y="${2.5 + H*f + 0.4}" fill="${textColor}" font-size="0.32" text-anchor="middle" font-weight="bold">Pared Lateral (x2)</text>
+          <text x="${24.0 + (sideLen/2)*f}" y="${2.5 + H*f + 0.7}" fill="${textColor}" font-size="0.22" text-anchor="middle">${Math.round(sideLen*10)/10} x ${H} cm</text>
+
+          <!-- Gradas en Acordeón -->
+          ${drawGradaGroup('back', backLen, 15.0, 8.0, 'Grada Trasera', 'x1')}
+          ${drawGradaGroup('side', sideLen, 24.0, 8.0, 'Grada Lateral', 'x2')}
+          ${drawGradaGroup('diagonal', diagLen, 15.0, 14.5, 'Grada Bisel', 'x4')}
+          ${drawGradaGroup('front-right', frontLen, 19.5, 14.5, 'Grada Frontal Der', 'x1')}
+          ${drawGradaGroup('front-left', frontLen, 24.0, 14.5, 'Grada Frontal Izq', 'x1')}
+
+          <!-- Pie de página -->
+          <line x1="1.5" y1="19.7" x2="28.2" y2="19.7" stroke="${textColor}" stroke-width="0.03" />
+          <text x="1.5" y="20.2" fill="${textColor}" font-size="0.35" text-anchor="start">Líneas Continuas = Cortar | Líneas Rojas Discontinuas = Doblar</text>
+          <text x="28.2" y="20.2" fill="${textColor}" font-size="0.35" text-anchor="end">EstadioCraft 3D - Referencia A4</text>
+        </svg>
+      `;
+    }
+
     // RENDERIZADOR DE PLANTILLAS 2D EN LA INTERFAZ
     function renderSVGTemplates(bleacherDepth) {
       const grid = document.getElementById('templates-grid');
       grid.innerHTML = ''; // Limpiar malla
+
+      // --- PIEZA 0: PLANO DE DESPIECE / PORTADA ---
+      const overviewSVG = createOverviewSVG(bleacherDepth, false);
+      grid.appendChild(createTemplateCard('Plano de Despiece (Referencia A4)', 'Ficha de referencia con todas las piezas a escala reducida en una hoja A4.', overviewSVG, 'plano_despiece_referencia.svg'));
 
       // Lista de piezas a renderizar
       // 1. La Base Octogonal
@@ -1402,6 +1611,7 @@
     function downloadAllSVGs() {
       const bleacherDepth = N * wd;
       const files = [
+        { name: '00_plano_despiece_referencia.svg', content: createOverviewSVG(bleacherDepth, false) },
         { name: '01_base_estadio.svg', content: createBaseSVG(bleacherDepth) },
         { name: '02_paredes.svg', content: document.getElementById('select-walls').value === 'continuous' ? createContinuousWallSVG() : createSegmentedWallsSVG() },
         { name: '03_grada_trasera.svg', content: createGradaSVG('back', L - 2 * K, bleacherDepth) },
@@ -1538,6 +1748,19 @@
             <span>🏟️ <strong>EstadioCraft 3D:</strong> Listo para imprimir a escala real 1:1. Configura tu impresora en orientación <strong>Horizontal / Landscape</strong> y escala al <strong>100%</strong>.</span>
             <button onclick="window.print()" class="btn-action">Imprimir Planos ahora</button>
           </div>
+      `;
+
+      // 0. PORTADA / PLANO DE DESPIECE (Hoja 0)
+      const overviewSVGPrint = createOverviewSVG(bleacherDepth, true);
+      html += `
+        <div class="page-container">
+          <div class="printable-area" style="border: none;">
+            ${overviewSVGPrint}
+          </div>
+          <!-- Marcas de registro -->
+          ${drawRegMarksHTML()}
+          <div class="page-info">🏟️ EstadioCraft 3D | <strong>Hoja 0: Plano de Despiece / Ficha de Referencia</strong> | Proporcional A4</div>
+        </div>
       `;
 
       // 1. BALDOSAS PARA LA BASE DEL ESTADIO (L x W)
